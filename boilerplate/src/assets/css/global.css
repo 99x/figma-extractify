@@ -1,0 +1,8 @@
+@import 'tailwindcss';
+
+@import './base/theme.pcss';
+@import './base/globals.pcss';
+@import './base/grid.pcss';
+@import './base/typography.pcss';
+@import './base/buttons.pcss';
+@import './base/rich-text.pcss';

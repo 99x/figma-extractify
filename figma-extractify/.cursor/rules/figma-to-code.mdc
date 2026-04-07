@@ -1,0 +1,23 @@
+---
+description: Figma Extractify — Next.js 16 + Tailwind CSS v4 workflow.
+globs: **/*.tsx,**/*.ts,**/*.pcss,**/*.css
+alwaysApply: true
+---
+
+Before starting any task in this project, read @_docs/SKILL.md for the step-by-step workflow.
+
+Then read in order:
+- @_docs/start-here.md — golden rules and entry point
+- @_docs/structure/project-rules.md — naming and file conventions
+- @_docs/learnings.md — common mistakes (read the top 10 before writing any code)
+
+Key rules enforced in this project:
+- Never use a bare `<img>` — always `<Image>` from `next/image`
+- Never use `<figure>` unless a `<figcaption>` is present (`next/image` handles `<picture>` internally)
+- Use `<Link>` from `next/link` only for internal Next.js routes; use plain `<a>` for `mailto:`, `tel:`, and external URLs
+- No CSS modules — use Tailwind utilities or PostCSS under `src/assets/css/`
+- All components are props-driven — no hardcoded content, no internal data fetching
+- All values in rem, never px
+- Every new component needs a preview page at `src/app/components/<name>/page.tsx`
+
+For Figma extraction tasks, also read the relevant contract under `_docs/front-end/`.

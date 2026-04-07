@@ -1,0 +1,36 @@
+# Figma Extractify — Next.js 16 + Tailwind CSS v4
+
+This is Figma Extractify. Components are built in isolation, previewed locally, and exported as typed, props-driven React modules. This is NOT a full Next.js application — routes under `src/app/` are preview pages only.
+
+## Before writing any code
+
+Read `_docs/SKILL.md` for the step-by-step workflow, then:
+- `_docs/start-here.md` — golden rules
+- `_docs/structure/project-rules.md` — naming and file conventions
+- `_docs/learnings.md` — top 10 common mistakes
+
+## Golden rules
+
+- Never use a bare `<img>` — always `<Image>` from `next/image`
+- Never wrap `<Image>` in `<figure>` unless a `<figcaption>` is present (`next/image` handles `<picture>` internally)
+- Use `<Link>` from `next/link` only for internal Next.js routes; use plain `<a>` for `mailto:`, `tel:`, and external URLs
+- No CSS modules — use Tailwind utilities or PostCSS under `src/assets/css/`
+- All components are fully props-driven — no hardcoded content, no internal data fetching
+- All values in rem, never px (1rem = 16px)
+- Every new component needs a preview page at `src/app/components/<name>/page.tsx` and a link in `src/app/page.tsx`
+
+## Tech stack
+
+- Next.js 16 (App Router, Turbopack)
+- React 19
+- Tailwind CSS v4 (CSS-first config via `@theme` in PostCSS)
+- TypeScript strict mode
+
+## Key paths
+
+- Components: `src/components/<ComponentName>/index.tsx`
+- Preview routes: `src/app/components/<name>/page.tsx`
+- Design tokens: `src/assets/css/base/theme.pcss`
+- Typography utilities: `src/assets/css/base/typography.pcss`
+- Button utilities: `src/assets/css/base/buttons.pcss`
+- Figma URL registry: `_docs/figma-paths.yaml`

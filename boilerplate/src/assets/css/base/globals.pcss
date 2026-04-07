@@ -1,0 +1,39 @@
+@layer utilities {
+    body,
+    html {
+        @apply font-body leading-relaxed text-base font-normal not-italic bg-white scroll-smooth w-full wrap-break-word text-black;
+        text-rendering: optimizeSpeed;
+    }
+
+    section {
+        @apply relative;
+    }
+
+    .scrollbar {
+        &::-webkit-scrollbar {
+            @apply w-1;
+        }
+
+        &::-webkit-scrollbar-track {
+            @apply bg-gray-200;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            @apply bg-black rounded-md;
+        }
+        
+        &::-webkit-scrollbar-thumb:hover {
+            @apply cursor-grab;
+        }
+    }
+
+    a,
+    button,
+    input {
+        @apply outline-offset-2 focus-visible:outline-1 focus-visible:outline-black;
+    }
+
+    .cover {
+        @apply absolute z-0 inset-0 object-cover w-full h-full;
+    }
+}

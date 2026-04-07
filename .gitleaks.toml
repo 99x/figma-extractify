@@ -1,0 +1,20 @@
+[extend]
+# Extend the default gitleaks config
+useDefault = true
+
+[allowlist]
+description = "Allowlist for known safe patterns in this project"
+paths = [
+    # Audit reports are documentation — not real secrets
+    '''security-audits/''',
+    # Example/template files are intentionally generic
+    '''\.example$''',
+]
+regexes = [
+    # Figma node IDs and file keys (not secrets)
+    '''node-[A-Z0-9:]+''',
+    # Placeholder patterns in docs
+    '''CHANGE_ME''',
+    '''your-.*-here''',
+    '''sk-ant-api03-\.\.\.''',
+]

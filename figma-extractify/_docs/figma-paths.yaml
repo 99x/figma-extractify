@@ -1,0 +1,55 @@
+# figma-paths.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# Paste the Figma URLs for each step of the design system setup below.
+# This file is read automatically when you run /extractify-setup.
+#
+# How to get a Figma URL:
+#   1. Open your Figma file
+#   2. Navigate to the page or frame you want to extract
+#   3. Copy the URL from the browser address bar
+#   4. Paste it next to the matching key below
+#
+# Leave a field empty (or as "~") if you want the wizard to ask you for it.
+# ─────────────────────────────────────────────────────────────────────────────
+
+setup:
+  # The Colors page — where your color variables/styles live
+  colors: ~
+
+  # The Typography page — font families and text styles (sizes, weights, line-heights)
+  typography: ~
+
+  # The Grid/Container page — breakpoints, container max-width, gutters
+  grid: 
+    - ~
+    - ~
+
+  # The Icons frame — the component set or frame containing all UI icons
+  icons: ~
+
+  # The Buttons page — all button variants (primary, secondary, ghost, etc.)
+  buttons: ~
+
+  # The Form Elements page — inputs, selects, checkboxes, radios, textareas, etc.
+  form-elements: ~
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Component Figma links
+# Add one line per component: <kebab-case-name>: <figma url>
+#
+# Usage:
+#   /extractify-new-component hero          → uses the URL defined below
+#   /extractify-new-component https://...   → uses the URL directly (also saved here)
+#   /extractify-new-component hero          → if not found here, Claude will ask you
+# ─────────────────────────────────────────────────────────────────────────────
+
+components:
+  # hero: https://www.figma.com/design/ABC123/Project?node-id=1-2
+  # breadcrumbs: ~
+  # list-links: ~
+
+  news-section:
+    figma: ~
+    children:
+      news-block:
+        figma: ~

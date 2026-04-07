@@ -1,0 +1,41 @@
+@layer utilities {
+    .rich-text {
+        @apply flex flex-col gap-8 leading-loose;
+
+        b,
+        strong {
+            @apply font-semibold;
+        }
+
+        a {
+            @apply relative inline-flex overflow-hidden w-fit;
+
+            &:before {
+                @apply content-[''] absolute bottom-0 left-0 w-full h-px bg-current;
+            }
+    
+            &:after {
+                @apply content-[''] absolute z-2 bottom-0 left-0 w-full h-px bg-white -translate-x-full duration-600 transition-transform;
+            }
+    
+            &:hover,
+            &:focus-visible {
+                &:after {
+                    @apply translate-x-full;
+                }
+            }
+        }
+
+        ul {
+            @apply relative pl-1;
+    
+            li {
+                @apply block relative pl-4 mb-1;
+    
+                &:before {
+                    @apply content-[''] w-1 min-w-1 h-1 bg-current absolute left-0 top-3.5;
+                }
+            }
+        }
+    }
+}
