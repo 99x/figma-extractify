@@ -46,3 +46,6 @@ test-results/
 
 # Audit reports
 .audit/
+
+# TypeScript incremental build metadata
+*.tsbuildinfo
