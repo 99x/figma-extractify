@@ -47,4 +47,8 @@ Pre-flight check
 All checks passed. Ready to run /extractify-setup.
 ```
 
-Stop and show fix instructions for any ❌ before proceeding. ⚠️ items are non-blocking warnings.
+Stop and show fix instructions for any ❌ before proceeding. ⚠️ items are non-blocking warnings. ✅ N/A items are sandbox-only skips — the bash script detected a Cowork environment and those checks don't apply.
+
+**Blocking in both environments:** Figma Desktop MCP, missing node_modules, missing figma-paths.yaml.
+**Blocking only locally (Claude Code):** Node.js version, Playwright/Chromium install failures.
+**Never blocking:** Node/Playwright/Chromium when reported as sandbox N/A.

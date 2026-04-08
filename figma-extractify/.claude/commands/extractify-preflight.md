@@ -19,37 +19,62 @@ The entire pre-flight is **3 steps**:
 ## Step 1 — Run the system check script (single bash command)
 
 ```bash
-export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+# Detect environment: Cowork runs in a Linux sandbox, Claude Code runs locally on macOS
+IS_LOCAL=false
+[ "$(uname)" = "Darwin" ] && IS_LOCAL=true
 
-# 1. Node.js
-NODE_VER=$(node --version 2>/dev/null)
-[ -z "$NODE_VER" ] && echo "NODE=missing" || echo "NODE=$NODE_VER"
+if $IS_LOCAL; then
+  # Local macOS — try nvm, Homebrew, and system paths
+  export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+  export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-# 2. Playwright CLI (auto-install if missing)
-PW_VER=$(npx playwright --version 2>/dev/null)
-if [ -z "$PW_VER" ]; then
-  echo "PLAYWRIGHT=installing"
-  npm install -D @playwright/test --silent 2>/dev/null
+  # 1. Node.js
+  NODE_VER=$(node --version 2>/dev/null)
+  [ -z "$NODE_VER" ] && echo "NODE=missing" || echo "NODE=$NODE_VER"
+
+  # 2. Playwright CLI (auto-install if missing)
   PW_VER=$(npx playwright --version 2>/dev/null)
-  [ -z "$PW_VER" ] && echo "PLAYWRIGHT=install_failed" || echo "PLAYWRIGHT=$PW_VER (just installed)"
+  if [ -z "$PW_VER" ]; then
+    echo "PLAYWRIGHT=installing"
+    npm install -D @playwright/test --silent 2>/dev/null
+    PW_VER=$(npx playwright --version 2>/dev/null)
+    [ -z "$PW_VER" ] && echo "PLAYWRIGHT=install_failed" || echo "PLAYWRIGHT=$PW_VER (just installed)"
+  else
+    echo "PLAYWRIGHT=$PW_VER"
+  fi
+
+  # 3. Chromium (auto-install if missing)
+  CHROMIUM=$(ls "$HOME/Library/Caches/ms-playwright" 2>/dev/null | grep -i "^chromium" || echo "")
+  if [ -z "$CHROMIUM" ]; then
+    echo "CHROMIUM=installing"
+    npx playwright install chromium 2>/dev/null
+    CHROMIUM=$(ls "$HOME/Library/Caches/ms-playwright" 2>/dev/null | grep -i "^chromium" || echo "")
+    [ -z "$CHROMIUM" ] && echo "CHROMIUM=install_failed" || echo "CHROMIUM=installed ($CHROMIUM)"
+  else
+    echo "CHROMIUM=ok ($CHROMIUM)"
+  fi
+
+  # 9. Ralph-loop stop hook
+  if [ -f ".claude/hooks/ralph-stop.sh" ] && [ -x ".claude/hooks/ralph-stop.sh" ]; then
+    echo "RALPH_LOOP=ok"
+  else
+    echo "RALPH_LOOP=missing (.claude/hooks/ralph-stop.sh not found or not executable)"
+  fi
+
+  # 10. jq
+  if command -v jq >/dev/null 2>&1; then echo "JQ=ok"
+  else echo "JQ=missing (run: brew install jq)"; fi
+
 else
-  echo "PLAYWRIGHT=$PW_VER"
+  # Cowork sandbox (Linux) — local system checks are not applicable
+  echo "NODE=sandbox"
+  echo "PLAYWRIGHT=sandbox"
+  echo "CHROMIUM=sandbox"
+  echo "RALPH_LOOP=sandbox"
+  echo "JQ=sandbox"
 fi
 
-# 3. Chromium (auto-install if missing)
-CHROMIUM=$(ls "$HOME/Library/Caches/ms-playwright" 2>/dev/null | grep -i "^chromium" \
-  || ls "$HOME/.cache/ms-playwright" 2>/dev/null | grep -i "^chromium" || echo "")
-if [ -z "$CHROMIUM" ]; then
-  echo "CHROMIUM=installing"
-  npx playwright install chromium 2>/dev/null
-  CHROMIUM=$(ls "$HOME/Library/Caches/ms-playwright" 2>/dev/null | grep -i "^chromium" \
-    || ls "$HOME/.cache/ms-playwright" 2>/dev/null | grep -i "^chromium" || echo "")
-  [ -z "$CHROMIUM" ] && echo "CHROMIUM=install_failed" || echo "CHROMIUM=installed ($CHROMIUM)"
-else
-  echo "CHROMIUM=ok ($CHROMIUM)"
-fi
-
-# 4. Node dependencies
+# 4. Node dependencies (meaningful in both environments — files are mounted)
 [ -d "node_modules" ] && echo "DEPS=ok" || echo "DEPS=missing"
 
 # 5. .screenshots/ directory (auto-create if missing)
@@ -68,33 +93,12 @@ fi
 # 7. pixelmatch + pngjs (visual diff)
 PIXELMATCH=$(node -e "try{require.resolve('pixelmatch');console.log('ok')}catch(e){console.log('missing')}" 2>/dev/null)
 PNGJS=$(node -e "try{require.resolve('pngjs');console.log('ok')}catch(e){console.log('missing')}" 2>/dev/null)
-if [ "$PIXELMATCH" = "ok" ] && [ "$PNGJS" = "ok" ]; then
-  echo "VISUAL_DIFF=ok"
-else
-  echo "VISUAL_DIFF=missing (run: npm install -D pixelmatch pngjs)"
-fi
+if [ "$PIXELMATCH" = "ok" ] && [ "$PNGJS" = "ok" ]; then echo "VISUAL_DIFF=ok"
+else echo "VISUAL_DIFF=missing"; fi
 
 # 8. @axe-core/playwright (a11y audit)
 AXE=$(node -e "try{require.resolve('@axe-core/playwright');console.log('ok')}catch(e){console.log('missing')}" 2>/dev/null)
-if [ "$AXE" = "ok" ]; then
-  echo "A11Y_AUDIT=ok"
-else
-  echo "A11Y_AUDIT=missing (run: npm install -D @axe-core/playwright)"
-fi
-
-# 9. Ralph-loop stop hook
-if [ -f ".claude/hooks/ralph-stop.sh" ] && [ -x ".claude/hooks/ralph-stop.sh" ]; then
-  echo "RALPH_LOOP=ok"
-else
-  echo "RALPH_LOOP=missing (.claude/hooks/ralph-stop.sh not found or not executable)"
-fi
-
-# 10. jq (required by ralph-stop.sh)
-if command -v jq >/dev/null 2>&1; then
-  echo "JQ=ok"
-else
-  echo "JQ=missing (run: brew install jq)"
-fi
+[ "$AXE" = "ok" ] && echo "A11Y_AUDIT=ok" || echo "A11Y_AUDIT=missing"
 ```
 
 Interpret each output line:
@@ -104,23 +108,26 @@ Interpret each output line:
 | `NODE=missing` | ❌ Install Node.js 18.17+ from https://nodejs.org |
 | `NODE=v16.x.x` (below v18.17) | ❌ Run `nvm install 20 && nvm use 20` |
 | `NODE=v18.17+` | ✅ |
+| `NODE=sandbox` | ✅ N/A — running in Cowork sandbox; check Node locally with `node --version` |
 | `PLAYWRIGHT=install_failed` | ❌ Run `npm install -D @playwright/test` manually |
 | `PLAYWRIGHT=*` (any version) | ✅ |
+| `PLAYWRIGHT=sandbox` | ✅ N/A — Cowork sandbox; Playwright runs locally |
 | `CHROMIUM=install_failed` | ❌ Run `npx playwright install chromium` manually |
 | `CHROMIUM=ok` or `installed` | ✅ |
+| `CHROMIUM=sandbox` | ✅ N/A — Cowork sandbox |
 | `DEPS=missing` | ❌ Run `npm install` |
 | `DEPS=ok` | ✅ |
 | `SCREENSHOTS=ok` or `created` | ✅ |
 | `YAML=missing` | ❌ Run `/extractify-setup` to create it |
 | `YAML=ok (...)` | ✅ |
-| `VISUAL_DIFF=missing` | ⚠️ Run `npm install -D pixelmatch pngjs` — visual diff falls back to AI-only |
+| `VISUAL_DIFF=missing` | ⚠️ Run `npm install -D pixelmatch pngjs` |
 | `VISUAL_DIFF=ok` | ✅ |
-| `A11Y_AUDIT=missing` | ⚠️ Run `npm install -D @axe-core/playwright` — a11y audit will be skipped |
+| `A11Y_AUDIT=missing` | ⚠️ Run `npm install -D @axe-core/playwright` |
 | `A11Y_AUDIT=ok` | ✅ |
-| `RALPH_LOOP=missing` | ⚠️ Stop hook missing — `/ralph-loop` won't enforce iteration limits |
-| `RALPH_LOOP=ok` | ✅ |
-| `JQ=missing` | ⚠️ Install jq (`brew install jq`) — Ralph stop hook cannot parse state |
-| `JQ=ok` | ✅ |
+| `RALPH_LOOP=missing` | ⚠️ Stop hook missing — copy from figma-extractify template |
+| `RALPH_LOOP=ok` or `sandbox` | ✅ |
+| `JQ=missing` | ⚠️ Install jq (`brew install jq`) |
+| `JQ=ok` or `sandbox` | ✅ |
 
 ---
 
