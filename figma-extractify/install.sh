@@ -175,7 +175,113 @@ else
   warn "Install with: brew install jq"
 fi
 
-# ── 5. Check Figma paths file ─────────────────────────────────────────────────
+# ── 5. Copy _docs/ contracts to the app root ─────────────────────────────────
+# The /extractify-setup wizard reads contract files from _docs/front-end/
+# (01-colors.md, 02-typography.md, etc.) and config from _docs/figma-paths.yaml.
+# Without these, the wizard cannot run any extraction step.
+step "Installing documentation contracts..."
+DOCS_SRC="$PROJECT_DIR/_docs"
+
+if [ -d "$DOCS_SRC" ] && [ -n "$APP_ROOT" ]; then
+  if [ -d "$APP_ROOT/_docs" ]; then
+    # Merge without overwriting — don't clobber user edits
+    # cp -n (no-clobber) works on macOS and GNU coreutils; fallback to plain cp
+    if cp -rn "$DOCS_SRC"/* "$APP_ROOT/_docs/" 2>/dev/null; then
+      ok "Merged _docs/ → $APP_ROOT/_docs/ (existing files preserved)"
+    else
+      # Fallback: copy everything (may overwrite)
+      cp -r "$DOCS_SRC"/* "$APP_ROOT/_docs/"
+      ok "Merged _docs/ → $APP_ROOT/_docs/"
+    fi
+  else
+    cp -r "$DOCS_SRC" "$APP_ROOT/_docs"
+    ok "Installed _docs/ → $APP_ROOT/_docs/"
+  fi
+elif [ -d "$DOCS_SRC" ] && [ -z "$APP_ROOT" ]; then
+  warn "_docs/ found but no app root detected — copy _docs/ to your project manually"
+else
+  warn "_docs/ not found in $PROJECT_DIR — contract files may be missing"
+  warn "Clone the repo with git to get the full documentation set."
+fi
+
+# ── 6. Copy project config files to app root ──────────────────────────────────
+# These files configure the IDE, MCP servers, and agent behaviour.
+# Without them, the agent loses project context after figma-extractify/ is deleted.
+step "Installing project config files..."
+
+if [ -n "$APP_ROOT" ]; then
+  # ── 6a. CLAUDE.md (project-level agent config) ─────────────────────────────
+  if [ -f "$PROJECT_DIR/CLAUDE.md" ] && [ ! -f "$APP_ROOT/CLAUDE.md" ]; then
+    cp "$PROJECT_DIR/CLAUDE.md" "$APP_ROOT/CLAUDE.md"
+    ok "Installed CLAUDE.md"
+  elif [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
+    ok "CLAUDE.md already exists — skipped"
+  fi
+
+  # ── 6b. .mcp.json (Figma MCP server definitions) ──────────────────────────
+  if [ -f "$PROJECT_DIR/.mcp.json" ] && [ ! -f "$APP_ROOT/.mcp.json" ]; then
+    cp "$PROJECT_DIR/.mcp.json" "$APP_ROOT/.mcp.json"
+    ok "Installed .mcp.json (Figma MCP servers)"
+  elif [ -f "$PROJECT_DIR/.mcp.json" ] && [ -f "$APP_ROOT/.mcp.json" ]; then
+    warn ".mcp.json already exists — review $PROJECT_DIR/.mcp.json and merge manually if needed"
+  fi
+
+  # ── 6c. .claude/settings.json (permissions + hooks) ────────────────────────
+  if [ -f "$PROJECT_DIR/.claude/settings.json" ] && [ ! -f "$APP_ROOT/.claude/settings.json" ]; then
+    mkdir -p "$APP_ROOT/.claude"
+    cp "$PROJECT_DIR/.claude/settings.json" "$APP_ROOT/.claude/settings.json"
+    ok "Installed .claude/settings.json"
+  elif [ -f "$PROJECT_DIR/.claude/settings.json" ]; then
+    ok ".claude/settings.json already exists — skipped"
+  fi
+
+  if [ -f "$PROJECT_DIR/.claude/settings.local.json" ] && [ ! -f "$APP_ROOT/.claude/settings.local.json" ]; then
+    mkdir -p "$APP_ROOT/.claude"
+    cp "$PROJECT_DIR/.claude/settings.local.json" "$APP_ROOT/.claude/settings.local.json"
+    ok "Installed .claude/settings.local.json"
+  fi
+
+  # ── 6d. scripts/ (visual-diff + a11y-audit) ────────────────────────────────
+  if [ -d "$PROJECT_DIR/scripts" ]; then
+    mkdir -p "$APP_ROOT/scripts"
+    for script_file in "$PROJECT_DIR/scripts"/*; do
+      [ -f "$script_file" ] || continue
+      script_name=$(basename "$script_file")
+      if [ ! -f "$APP_ROOT/scripts/$script_name" ]; then
+        cp "$script_file" "$APP_ROOT/scripts/$script_name"
+        ok "Installed scripts/$script_name"
+      else
+        ok "scripts/$script_name already exists — skipped"
+      fi
+    done
+  fi
+
+  # ── 6e. IDE rules (Cursor + Windsurf) ──────────────────────────────────────
+  if [ -d "$PROJECT_DIR/.cursor/rules" ]; then
+    mkdir -p "$APP_ROOT/.cursor/rules"
+    for rule_file in "$PROJECT_DIR/.cursor/rules"/*; do
+      [ -f "$rule_file" ] || continue
+      rule_name=$(basename "$rule_file")
+      if [ ! -f "$APP_ROOT/.cursor/rules/$rule_name" ]; then
+        cp "$rule_file" "$APP_ROOT/.cursor/rules/$rule_name"
+        ok "Installed .cursor/rules/$rule_name"
+      else
+        ok ".cursor/rules/$rule_name already exists — skipped"
+      fi
+    done
+  fi
+
+  if [ -f "$PROJECT_DIR/.windsurfrules" ] && [ ! -f "$APP_ROOT/.windsurfrules" ]; then
+    cp "$PROJECT_DIR/.windsurfrules" "$APP_ROOT/.windsurfrules"
+    ok "Installed .windsurfrules"
+  elif [ -f "$PROJECT_DIR/.windsurfrules" ]; then
+    ok ".windsurfrules already exists — skipped"
+  fi
+else
+  warn "No app root detected — copy config files manually (CLAUDE.md, .mcp.json, scripts/, .cursor/rules/)"
+fi
+
+# ── 7. Check Figma paths file ─────────────────────────────────────────────────
 # Look for figma-paths.yaml in APP_ROOT/_docs/ first (canonical location),
 # then fall back to the root of APP_ROOT (legacy placement).
 echo ""
@@ -197,7 +303,25 @@ if [ -n "$YAML_PATH" ]; then
   fi
 fi
 
-# ── 6. Done ───────────────────────────────────────────────────────────────────
+# ── 8. Clean up figma-extractify/ folder ──────────────────────────────────────
+# All files have been copied to the project — the source folder is no longer needed.
+echo ""
+echo -e "  ${GREEN}All files have been copied to your project.${NC}"
+echo -e "  The ${BOLD}figma-extractify/${NC} folder is no longer needed and can be safely deleted."
+echo ""
+read -r -p "  Delete figma-extractify/ folder now? [y/N] " DELETE_FOLDER
+if [[ "$DELETE_FOLDER" =~ ^[Yy]$ ]]; then
+  if [ -d "$PROJECT_DIR" ] && [ "$PROJECT_DIR" != "$APP_ROOT" ]; then
+    rm -rf "$PROJECT_DIR"
+    ok "Deleted $PROJECT_DIR"
+  else
+    warn "Could not determine a safe path to delete — remove figma-extractify/ manually"
+  fi
+else
+  warn "Skipped — you can delete figma-extractify/ manually whenever you're ready"
+fi
+
+# ── 9. Done ───────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}${BOLD}  Setup complete. Here's what to do next:${NC}"

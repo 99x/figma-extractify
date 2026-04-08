@@ -25,23 +25,34 @@ for pkg in $QA_PKGS; do
   fi
 done
 
-# ── 2. Remove installed Cowork skills ────────────────────────────────────────
-step "Removing Cowork skills..."
+# ── 2. Remove installed Claude commands ───────────────────────────────────────
+step "Removing Claude commands..."
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GLOBAL_COMMANDS_DIR="$HOME/.claude/commands"
+for cmd_file in "$PROJECT_DIR/.claude/commands"/extractify-*.md "$PROJECT_DIR/.claude/commands"/ralph-loop.md; do
+  [ -f "$cmd_file" ] || continue
+  cmd_name=$(basename "$cmd_file")
+  target="$GLOBAL_COMMANDS_DIR/$cmd_name"
+  [ -f "$target" ] && rm "$target" && ok "Removed ~/.claude/commands/$cmd_name" || warn "$cmd_name not in ~/.claude/commands/, skipping"
+done
+
+# ── 3. Remove installed Cowork skills ────────────────────────────────────────
+step "Removing Cowork skills..."
 GLOBAL_SKILLS_DIR="$HOME/.claude/skills"
 for skill_dir in "$PROJECT_DIR/.claude/skills"/extractify-*/; do
+  [ -d "$skill_dir" ] || continue
   skill_name=$(basename "$skill_dir")
   target="$GLOBAL_SKILLS_DIR/$skill_name"
   [ -d "$target" ] && rm -rf "$target" && ok "Removed ~/.claude/skills/$skill_name" || warn "$skill_name not in ~/.claude/skills/, skipping"
 done
 
-# ── 3. Remove runtime state files ─────────────────────────────────────────────
+# ── 4. Remove runtime state files ─────────────────────────────────────────────
 step "Cleaning up runtime files..."
 [ -f ".ralph-loop-state.json" ] && rm ".ralph-loop-state.json" && ok "Removed .ralph-loop-state.json" || true
 [ -d ".screenshots" ]           && rm -rf ".screenshots"        && ok "Removed .screenshots/"         || true
 [ -d ".audit" ]                 && rm -rf ".audit"              && ok "Removed .audit/"               || true
 
-# ── 3. Done ───────────────────────────────────────────────────────────────────
+# ── 5. Done ───────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}${BOLD}  Done.${NC} The boilerplate source files are untouched."

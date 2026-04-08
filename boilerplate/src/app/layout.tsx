@@ -45,7 +45,7 @@ export default function RootLayout({
 
 				<Footer />
 
-				<Guidelines />
+				{ process.env.NODE_ENV === 'development' && <Guidelines /> }
 
 			</body>
 		</html>

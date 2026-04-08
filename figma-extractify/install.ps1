@@ -171,7 +171,133 @@ if (Get-Command jq -ErrorAction SilentlyContinue) {
     warn "Install with: winget install jqlang.jq  (or via https://jqlang.github.io/jq/download/)"
 }
 
-# ── 5. Check Figma paths file ─────────────────────────────────────────────────
+# ── 5. Copy _docs/ contracts to the app root ─────────────────────────────────
+# The /extractify-setup wizard reads contract files from _docs/front-end/
+# (01-colors.md, 02-typography.md, etc.) and config from _docs/figma-paths.yaml.
+# Without these, the wizard cannot run any extraction step.
+step "Installing documentation contracts..."
+$DOCS_SRC = Join-Path $PROJECT_DIR "_docs"
+
+if ((Test-Path $DOCS_SRC) -and $APP_ROOT) {
+    $DOCS_DEST = Join-Path $APP_ROOT "_docs"
+    if (Test-Path $DOCS_DEST) {
+        # Merge without overwriting — don't clobber user edits
+        # Copy each item only if it doesn't already exist at the destination
+        Get-ChildItem -Path $DOCS_SRC -Recurse | ForEach-Object {
+            $relativePath = $_.FullName.Substring($DOCS_SRC.Length)
+            $destPath = Join-Path $DOCS_DEST $relativePath
+            if ($_.PSIsContainer) {
+                if (-not (Test-Path $destPath)) {
+                    New-Item -ItemType Directory -Force -Path $destPath | Out-Null
+                }
+            } else {
+                if (-not (Test-Path $destPath)) {
+                    Copy-Item $_.FullName -Destination $destPath -Force
+                }
+            }
+        }
+        ok "Merged _docs/ → $DOCS_DEST (existing files preserved)"
+    } else {
+        Copy-Item $DOCS_SRC -Destination $DOCS_DEST -Recurse
+        ok "Installed _docs/ → $DOCS_DEST"
+    }
+} elseif ((Test-Path $DOCS_SRC) -and -not $APP_ROOT) {
+    warn "_docs/ found but no app root detected — copy _docs/ to your project manually"
+} else {
+    warn "_docs/ not found in $PROJECT_DIR — contract files may be missing"
+    warn "Clone the repo with git to get the full documentation set."
+}
+
+# ── 6. Copy project config files to app root ──────────────────────────────────
+# These files configure the IDE, MCP servers, and agent behaviour.
+# Without them, the agent loses project context after figma-extractify/ is deleted.
+step "Installing project config files..."
+
+if ($APP_ROOT) {
+    # ── 6a. CLAUDE.md (project-level agent config) ───────────────────────────
+    $claudeMdSrc = Join-Path $PROJECT_DIR "CLAUDE.md"
+    $claudeMdDest = Join-Path $APP_ROOT "CLAUDE.md"
+    if ((Test-Path $claudeMdSrc) -and -not (Test-Path $claudeMdDest)) {
+        Copy-Item $claudeMdSrc -Destination $claudeMdDest
+        ok "Installed CLAUDE.md"
+    } elseif (Test-Path $claudeMdSrc) {
+        ok "CLAUDE.md already exists — skipped"
+    }
+
+    # ── 6b. .mcp.json (Figma MCP server definitions) ────────────────────────
+    $mcpSrc = Join-Path $PROJECT_DIR ".mcp.json"
+    $mcpDest = Join-Path $APP_ROOT ".mcp.json"
+    if ((Test-Path $mcpSrc) -and -not (Test-Path $mcpDest)) {
+        Copy-Item $mcpSrc -Destination $mcpDest
+        ok "Installed .mcp.json (Figma MCP servers)"
+    } elseif ((Test-Path $mcpSrc) -and (Test-Path $mcpDest)) {
+        warn ".mcp.json already exists — review $mcpSrc and merge manually if needed"
+    }
+
+    # ── 6c. .claude/settings.json (permissions + hooks) ──────────────────────
+    $settingsSrc = Join-Path $PROJECT_DIR ".claude" "settings.json"
+    $settingsDest = Join-Path $APP_ROOT ".claude" "settings.json"
+    if ((Test-Path $settingsSrc) -and -not (Test-Path $settingsDest)) {
+        New-Item -ItemType Directory -Force -Path (Join-Path $APP_ROOT ".claude") | Out-Null
+        Copy-Item $settingsSrc -Destination $settingsDest
+        ok "Installed .claude\settings.json"
+    } elseif (Test-Path $settingsSrc) {
+        ok ".claude\settings.json already exists — skipped"
+    }
+
+    $settingsLocalSrc = Join-Path $PROJECT_DIR ".claude" "settings.local.json"
+    $settingsLocalDest = Join-Path $APP_ROOT ".claude" "settings.local.json"
+    if ((Test-Path $settingsLocalSrc) -and -not (Test-Path $settingsLocalDest)) {
+        New-Item -ItemType Directory -Force -Path (Join-Path $APP_ROOT ".claude") | Out-Null
+        Copy-Item $settingsLocalSrc -Destination $settingsLocalDest
+        ok "Installed .claude\settings.local.json"
+    }
+
+    # ── 6d. scripts/ (visual-diff + a11y-audit) ─────────────────────────────
+    $scriptsSrc = Join-Path $PROJECT_DIR "scripts"
+    if (Test-Path $scriptsSrc) {
+        $scriptsDest = Join-Path $APP_ROOT "scripts"
+        New-Item -ItemType Directory -Force -Path $scriptsDest | Out-Null
+        Get-ChildItem -Path $scriptsSrc -File | ForEach-Object {
+            $destFile = Join-Path $scriptsDest $_.Name
+            if (-not (Test-Path $destFile)) {
+                Copy-Item $_.FullName -Destination $destFile
+                ok "Installed scripts\$($_.Name)"
+            } else {
+                ok "scripts\$($_.Name) already exists — skipped"
+            }
+        }
+    }
+
+    # ── 6e. IDE rules (Cursor + Windsurf) ────────────────────────────────────
+    $cursorSrc = Join-Path $PROJECT_DIR ".cursor" "rules"
+    if (Test-Path $cursorSrc) {
+        $cursorDest = Join-Path $APP_ROOT ".cursor" "rules"
+        New-Item -ItemType Directory -Force -Path $cursorDest | Out-Null
+        Get-ChildItem -Path $cursorSrc -File | ForEach-Object {
+            $destFile = Join-Path $cursorDest $_.Name
+            if (-not (Test-Path $destFile)) {
+                Copy-Item $_.FullName -Destination $destFile
+                ok "Installed .cursor\rules\$($_.Name)"
+            } else {
+                ok ".cursor\rules\$($_.Name) already exists — skipped"
+            }
+        }
+    }
+
+    $windsurfSrc = Join-Path $PROJECT_DIR ".windsurfrules"
+    $windsurfDest = Join-Path $APP_ROOT ".windsurfrules"
+    if ((Test-Path $windsurfSrc) -and -not (Test-Path $windsurfDest)) {
+        Copy-Item $windsurfSrc -Destination $windsurfDest
+        ok "Installed .windsurfrules"
+    } elseif (Test-Path $windsurfSrc) {
+        ok ".windsurfrules already exists — skipped"
+    }
+} else {
+    warn "No app root detected — copy config files manually (CLAUDE.md, .mcp.json, scripts\, .cursor\rules\)"
+}
+
+# ── 7. Check Figma paths file ─────────────────────────────────────────────────
 Write-Host ""
 $YAML_PATH = $null
 
@@ -199,7 +325,25 @@ if ($YAML_PATH) {
     }
 }
 
-# ── 6. Done ───────────────────────────────────────────────────────────────────
+# ── 8. Clean up figma-extractify\ folder ──────────────────────────────────────
+# All files have been copied to the project — the source folder is no longer needed.
+Write-Host ""
+Write-Host "  All files have been copied to your project." -ForegroundColor Green
+Write-Host "  The " -NoNewline; Write-Host "figma-extractify\" -ForegroundColor White -NoNewline; Write-Host " folder is no longer needed and can be safely deleted."
+Write-Host ""
+$DELETE_FOLDER = Read-Host "  Delete figma-extractify\ folder now? [y/N]"
+if ($DELETE_FOLDER -match '^[Yy]$') {
+    if ($PROJECT_DIR -and ($PROJECT_DIR -ne $APP_ROOT) -and (Test-Path $PROJECT_DIR)) {
+        Remove-Item $PROJECT_DIR -Recurse -Force
+        ok "Deleted $PROJECT_DIR"
+    } else {
+        warn "Could not determine a safe path to delete — remove figma-extractify\ manually"
+    }
+} else {
+    warn "Skipped — you can delete figma-extractify\ manually whenever you're ready"
+}
+
+# ── 9. Done ───────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
 Write-Host "  Setup complete. Here's what to do next:" -ForegroundColor Green
