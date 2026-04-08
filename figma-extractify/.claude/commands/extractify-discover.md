@@ -34,7 +34,15 @@ Run the same bash script from `/extractify-preflight`. Only Node.js and deps are
 
 ### Step 2 — Check Figma Desktop MCP (read access)
 
-Try calling `get_metadata` using the `figma-desktop` server.
+First resolve the Desktop server id from the MCP servers available in the current environment.
+
+Try these candidates in order and use the first one that exists:
+
+- `user-figma`
+- `user-Figma Desktop`
+- `figma-desktop`
+
+Then try calling `get_metadata` using that resolved Desktop server id.
 
 - Tool responds (even with an error) → ✅ Figma Desktop MCP available
 - Tool not found / connection refused → ❌ Stop with setup instructions (same as `/extractify-preflight`)
@@ -43,7 +51,14 @@ Try calling `get_metadata` using the `figma-desktop` server.
 
 `generate_figma_design` is available **only on the remote MCP** (`https://mcp.figma.com/mcp`) and **only in Claude Code**. It does NOT exist on the desktop MCP.
 
-Try calling `generate_figma_design` with a minimal test payload.
+First resolve the Remote server id from the MCP servers available in the current environment.
+
+Try these candidates in order and use the first one that exists:
+
+- `plugin-figma-figma`
+- `figma`
+
+Then try calling `generate_figma_design` with a minimal test payload.
 
 - Tool exists (even if it errors) → ✅ Write-back available
 - Tool not found → ⚠️ Write-back disabled

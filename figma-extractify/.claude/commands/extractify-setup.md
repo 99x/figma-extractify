@@ -65,8 +65,14 @@ fi
 if [ -d ".screenshots" ]; then echo "SCREENSHOTS=ok"
 else mkdir -p .screenshots && echo "SCREENSHOTS=created"; fi
 
-# 6. figma-paths.yaml
-[ -f "_docs/figma-paths.yaml" ] && echo "YAML=ok" || echo "YAML=missing"
+# 6. figma-paths.yaml (support both root and _docs)
+if [ -f "figma-paths.yaml" ]; then
+  echo "YAML=ok (figma-paths.yaml)"
+elif [ -f "_docs/figma-paths.yaml" ]; then
+  echo "YAML=ok (_docs/figma-paths.yaml)"
+else
+  echo "YAML=missing"
+fi
 ```
 
 Read each output line and interpret:
@@ -84,7 +90,7 @@ Read each output line and interpret:
 | `DEPS=ok` | ✅ |
 | `SCREENSHOTS=ok` or `created` | ✅ |
 | `YAML=missing` | create it (see below) — not a blocking failure |
-| `YAML=ok` | ✅ |
+| `YAML=ok (...)` | ✅ |
 
 **If `NODE=missing`**, stop entirely and output:
 
@@ -141,7 +147,7 @@ Run the following in your project root, then run /extractify-setup again:
   npm install
 ```
 
-**If `YAML=missing`**, create `_docs/figma-paths.yaml` using the Write tool (no bash needed):
+**If `YAML=missing`**, create `figma-paths.yaml` at the project root using the Write tool (no bash needed):
 
 ```yaml
 # Figma source-of-truth URLs for all setup steps and components.
@@ -159,12 +165,29 @@ components: {}
 ```
 
 Then continue — this is not a blocking failure.
+If `_docs/figma-paths.yaml` already exists (and root does not), keep using `_docs/figma-paths.yaml` to avoid splitting state.
+
+### YAML path resolution rule (use this for all phases below)
+
+Resolve `FIGMA_PATHS_FILE` once before Phase 1 and reuse it:
+
+1. If `figma-paths.yaml` exists in the current project root, use it
+2. Else if `_docs/figma-paths.yaml` exists, use it
+3. Else create `figma-paths.yaml` in project root and use it
 
 ---
 
 ### Step 2 — Check Figma Desktop MCP (one tool call)
 
-Attempt to call `get_metadata` using the `figma-desktop` server.
+First resolve the Desktop server id from the MCP servers available in the current environment.
+
+Try these candidates in order and use the first one that exists:
+
+- `user-figma`
+- `user-Figma Desktop`
+- `figma-desktop`
+
+Then attempt to call `get_metadata` using that resolved Desktop server id.
 
 - Tool responds (even with an error) → ✅ Figma Desktop MCP available
 - Tool not found / connection refused → ❌ Figma Desktop not running
@@ -208,7 +231,7 @@ Ready to run setup. Starting wizard…
 
 ## Phase 1 — Load saved URLs (orchestrator)
 
-Read `_docs/figma-paths.yaml` and load all URLs:
+Read `FIGMA_PATHS_FILE` and load all URLs:
 
 - `setup.colors` → Step 1
 - `setup.typography` → Step 2
@@ -262,7 +285,7 @@ This lets the user visually confirm the correct Figma frame before committing.
 - Response starts with `https://` → extract `nodeId` + `fileKey`, call `get_screenshot`, display the image, then save and proceed
 - Response is `skip` → skip step
 
-After each step: save the URL back to `_docs/figma-paths.yaml`, confirm completion, then move to the next step.
+After each step: save the URL back to `FIGMA_PATHS_FILE`, confirm completion, then move to the next step.
 
 ### Preview and confirmation (orchestrator — required before spawning extraction subagent)
 

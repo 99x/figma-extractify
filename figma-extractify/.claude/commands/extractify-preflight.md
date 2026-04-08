@@ -56,8 +56,14 @@ fi
 if [ -d ".screenshots" ]; then echo "SCREENSHOTS=ok"
 else mkdir -p .screenshots && echo "SCREENSHOTS=created"; fi
 
-# 6. figma-paths.yaml
-[ -f "_docs/figma-paths.yaml" ] && echo "YAML=ok" || echo "YAML=missing"
+# 6. figma-paths.yaml (support both root and _docs)
+if [ -f "figma-paths.yaml" ]; then
+  echo "YAML=ok (figma-paths.yaml)"
+elif [ -f "_docs/figma-paths.yaml" ]; then
+  echo "YAML=ok (_docs/figma-paths.yaml)"
+else
+  echo "YAML=missing"
+fi
 
 # 7. pixelmatch + pngjs (visual diff)
 PIXELMATCH=$(node -e "try{require.resolve('pixelmatch');console.log('ok')}catch(e){console.log('missing')}" 2>/dev/null)
@@ -82,6 +88,13 @@ if [ -f ".claude/hooks/ralph-stop.sh" ] && [ -x ".claude/hooks/ralph-stop.sh" ];
 else
   echo "RALPH_LOOP=missing (.claude/hooks/ralph-stop.sh not found or not executable)"
 fi
+
+# 10. jq (required by ralph-stop.sh)
+if command -v jq >/dev/null 2>&1; then
+  echo "JQ=ok"
+else
+  echo "JQ=missing (run: brew install jq)"
+fi
 ```
 
 Interpret each output line:
@@ -99,13 +112,15 @@ Interpret each output line:
 | `DEPS=ok` | ✅ |
 | `SCREENSHOTS=ok` or `created` | ✅ |
 | `YAML=missing` | ❌ Run `/extractify-setup` to create it |
-| `YAML=ok` | ✅ |
+| `YAML=ok (...)` | ✅ |
 | `VISUAL_DIFF=missing` | ⚠️ Run `npm install -D pixelmatch pngjs` — visual diff falls back to AI-only |
 | `VISUAL_DIFF=ok` | ✅ |
 | `A11Y_AUDIT=missing` | ⚠️ Run `npm install -D @axe-core/playwright` — a11y audit will be skipped |
 | `A11Y_AUDIT=ok` | ✅ |
 | `RALPH_LOOP=missing` | ⚠️ Stop hook missing — `/ralph-loop` won't enforce iteration limits |
 | `RALPH_LOOP=ok` | ✅ |
+| `JQ=missing` | ⚠️ Install jq (`brew install jq`) — Ralph stop hook cannot parse state |
+| `JQ=ok` | ✅ |
 
 ---
 
@@ -113,7 +128,15 @@ Interpret each output line:
 
 The Desktop MCP runs locally via Figma Desktop. It gives access to Dev Mode, variables, and component inspection. **No API key required** — it uses your logged-in Figma Desktop session.
 
-Attempt to call `get_metadata` using the `figma-desktop` server.
+First resolve the Desktop server id from the MCP servers available in the current environment.
+
+Try these candidates in order and use the first one that exists:
+
+- `user-figma`
+- `user-Figma Desktop`
+- `figma-desktop`
+
+Then attempt to call `get_metadata` using that resolved Desktop server id.
 
 - Tool responds (even with an error) → ✅ Desktop MCP available
 - Tool not found / connection refused → ❌ Figma Desktop not running or not configured
@@ -139,25 +162,35 @@ Steps to fix:
 
 ---
 
-## Step 3 — Check Figma Remote MCP (required for write-back and OAuth features)
+## Step 3 — Check Figma Remote MCP (required for discover and write-back)
 
 The Remote MCP runs at https://mcp.figma.com/mcp and uses **OAuth** — Claude Code handles the authentication handshake automatically on first use. No API key or token needed in the config.
 
-Attempt to call `get_metadata` using the `figma` (remote) server.
+First resolve the Remote server id from the MCP servers available in the current environment.
+
+Try these candidates in order and use the first one that exists:
+
+- `plugin-figma-figma`
+- `figma`
+
+Then attempt to call `get_metadata` using that resolved Remote server id.
 
 - Tool responds (even with an error) → ✅ Remote MCP connected
-- Tool not found / 401 / auth error → ❌ Not authenticated
+- Tool not found / 401 / auth error → ⚠️ Not authenticated (non-blocking for `/extractify-setup`)
 
-If ❌:
+If ⚠️:
 
 ```
-❌ Figma Remote MCP not authenticated.
+⚠️ Figma Remote MCP not authenticated.
 
 This project uses OAuth — no API key required. Claude Code handles
 the login automatically on first connection.
 
+This is non-blocking for local extraction workflows that only need Desktop MCP.
+It is required for remote-only features such as `/extractify-discover` write-back flows.
+
 Steps to fix:
-  1. Make sure .mcp.json is present and contains:
+  1. Make sure .mcp.json is present and contains a remote Figma MCP entry
 
      {
        "mcpServers": {
@@ -184,7 +217,7 @@ Steps to fix:
 
 `generate_figma_design` is only available on the **remote MCP**, not the desktop one.
 
-Attempt to call `generate_figma_design` with a minimal test payload.
+Use the same resolved Remote server id from Step 3, then attempt to call `generate_figma_design` with a minimal test payload.
 
 - Tool exists (even if it errors) → ✅ Write-back available
 - Tool not found → ⚠️ Write-back not available (non-blocking)
@@ -220,9 +253,21 @@ Pre-flight check
   ✅  Visual diff (pixelmatch)  ready
   ✅  A11y audit (axe-core)    ready
   ✅  Ralph-loop stop hook     ready
+  ✅  jq                       installed
 
 ────────────────────────────────────
 All checks passed. Ready to run /extractify-setup.
 ```
 
 Use ✅ for pass, ❌ for blocking failure (stop and show fix instructions), ⚠️ for non-blocking warning.
+
+Blocking failures:
+- Node.js
+- Figma Desktop MCP
+- Playwright/Chromium install failures
+- Missing dependencies
+
+Non-blocking warnings:
+- Figma Remote MCP not authenticated
+- generate_figma_design not available
+- Ralph-loop stop hook missing

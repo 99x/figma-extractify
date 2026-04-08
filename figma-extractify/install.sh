@@ -15,6 +15,18 @@ step() { echo -e "\n${BLUE}▶${NC} ${BOLD}$1${NC}"; }
 warn() { echo -e "${YELLOW}⚠${NC} $1"; }
 err()  { echo -e "${RED}✗${NC} $1"; }
 
+# ── Resolve app root (where package.json lives) ───────────────────────────────
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_ROOT=""
+
+if [ -f "package.json" ]; then
+  APP_ROOT="$(pwd)"
+elif [ -f "../boilerplate/package.json" ]; then
+  APP_ROOT="$(cd ../boilerplate && pwd)"
+elif [ -f "boilerplate/package.json" ]; then
+  APP_ROOT="$(cd boilerplate && pwd)"
+fi
+
 # ── Header ────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}╔══════════════════════════════════════════════╗${NC}"
@@ -41,17 +53,20 @@ ok "Node.js $NODE_VER"
 # This script lives in figma-extractify/ — one level down from the repo root.
 # We detect where package.json is and install from there.
 step "Installing dependencies..."
-if [ -f "package.json" ]; then
-  npm install
-  ok "Dependencies installed"
+if [ -n "$APP_ROOT" ]; then
+  if [ "$APP_ROOT" = "$(pwd)" ]; then
+    npm install
+    ok "Dependencies installed"
+  else
+    warn "No package.json in this directory — monorepo layout detected."
+    warn "Installing from $APP_ROOT ..."
+    (cd "$APP_ROOT" && npm install)
+    ok "Dependencies installed in $(basename "$APP_ROOT")/"
+  fi
 elif [ -f "../boilerplate/package.json" ]; then
   warn "No package.json in this directory — monorepo layout detected."
   warn "Installing from ../boilerplate/ ..."
   (cd ../boilerplate && npm install)
-  ok "Dependencies installed in boilerplate/"
-elif [ -f "boilerplate/package.json" ]; then
-  warn "No package.json in this directory — installing from boilerplate/ ..."
-  (cd boilerplate && npm install)
   ok "Dependencies installed in boilerplate/"
 else
   warn "No package.json found anywhere nearby — skipping npm install."
@@ -67,13 +82,13 @@ read -r -p "  Install QA tools? [y/N] " INSTALL_QA
 if [[ "$INSTALL_QA" =~ ^[Yy]$ ]]; then
   step "Installing QA tools..."
   # Install into the same location as the main dependencies
-  if [ -f "package.json" ]; then
-    npm install -D pixelmatch pngjs @axe-core/playwright @playwright/test
-    npx playwright install chromium
-  elif [ -f "../boilerplate/package.json" ]; then
-    (cd ../boilerplate && npm install -D pixelmatch pngjs @axe-core/playwright @playwright/test && npx playwright install chromium)
-  elif [ -f "boilerplate/package.json" ]; then
-    (cd boilerplate && npm install -D pixelmatch pngjs @axe-core/playwright @playwright/test && npx playwright install chromium)
+  if [ -n "$APP_ROOT" ]; then
+    if [ "$APP_ROOT" = "$(pwd)" ]; then
+      npm install -D pixelmatch pngjs @axe-core/playwright @playwright/test
+      npx playwright install chromium
+    else
+      (cd "$APP_ROOT" && npm install -D pixelmatch pngjs @axe-core/playwright @playwright/test && npx playwright install chromium)
+    fi
   fi
   ok "QA tools installed"
 else
@@ -86,7 +101,6 @@ fi
 #
 # NOTE: Commands live in .claude/commands/ — NOT just skills. Both must be copied.
 step "Installing Claude commands and Cowork skills..."
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLOBAL_COMMANDS_DIR="$HOME/.claude/commands"
 GLOBAL_SKILLS_DIR="$HOME/.claude/skills"
 
@@ -98,7 +112,7 @@ COMMANDS_SRC="$PROJECT_DIR/.claude/commands"
 COMMANDS_FOUND=false
 
 if [ -d "$COMMANDS_SRC" ]; then
-  for cmd_file in "$COMMANDS_SRC"/extractify-*.md; do
+  for cmd_file in "$COMMANDS_SRC"/extractify-*.md "$COMMANDS_SRC"/ralph-loop.md; do
     [ -f "$cmd_file" ] || continue
     cmd_name=$(basename "$cmd_file")
     cp "$cmd_file" "$GLOBAL_COMMANDS_DIR/"
@@ -135,6 +149,30 @@ done
 if [ "$SKILLS_FOUND" = false ]; then
   warn "No extractify-* skills found — skills directory may be missing"
   warn "Clone the repo with git to get the full skill set."
+fi
+
+# ── 4c. Ralph Loop stop hook (project-local) ──────────────────────────────────
+step "Installing Ralph Loop stop hook..."
+HOOK_SRC="$PROJECT_DIR/.claude/hooks/ralph-stop.sh"
+
+if [ ! -f "$HOOK_SRC" ]; then
+  warn "Hook source not found at .claude/hooks/ralph-stop.sh — skipping."
+elif [ -z "$APP_ROOT" ]; then
+  warn "Could not detect app root (package.json not found)."
+  warn "Copy hook manually to your project: .claude/hooks/ralph-stop.sh"
+else
+  HOOK_DEST_DIR="$APP_ROOT/.claude/hooks"
+  mkdir -p "$HOOK_DEST_DIR"
+  cp "$HOOK_SRC" "$HOOK_DEST_DIR/ralph-stop.sh"
+  chmod +x "$HOOK_DEST_DIR/ralph-stop.sh"
+  ok "Installed Ralph stop hook: $HOOK_DEST_DIR/ralph-stop.sh"
+fi
+
+if command -v jq &>/dev/null; then
+  ok "jq found (required by ralph-stop.sh)"
+else
+  warn "jq not found — /ralph-loop stop hook requires jq"
+  warn "Install with: brew install jq"
 fi
 
 # ── 5. Check Figma paths file ─────────────────────────────────────────────────
