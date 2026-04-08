@@ -176,9 +176,20 @@ else
 fi
 
 # ── 5. Check Figma paths file ─────────────────────────────────────────────────
+# Look for figma-paths.yaml in APP_ROOT/_docs/ first (canonical location),
+# then fall back to the root of APP_ROOT (legacy placement).
 echo ""
-if [ -f "_docs/figma-paths.yaml" ]; then
-  COLORS_URL=$(grep -A1 "colors:" _docs/figma-paths.yaml | tail -1 | tr -d ' ' | sed 's/colors://')
+YAML_PATH=""
+if [ -n "$APP_ROOT" ] && [ -f "$APP_ROOT/_docs/figma-paths.yaml" ]; then
+  YAML_PATH="$APP_ROOT/_docs/figma-paths.yaml"
+elif [ -n "$APP_ROOT" ] && [ -f "$APP_ROOT/figma-paths.yaml" ]; then
+  YAML_PATH="$APP_ROOT/figma-paths.yaml"
+elif [ -f "_docs/figma-paths.yaml" ]; then
+  YAML_PATH="_docs/figma-paths.yaml"
+fi
+
+if [ -n "$YAML_PATH" ]; then
+  COLORS_URL=$(grep -A1 "colors:" "$YAML_PATH" | tail -1 | tr -d ' ' | sed 's/colors://')
   if [[ -z "$COLORS_URL" || "$COLORS_URL" == "~" ]]; then
     warn "Figma URLs not set yet — edit _docs/figma-paths.yaml before running /extractify-setup"
   else

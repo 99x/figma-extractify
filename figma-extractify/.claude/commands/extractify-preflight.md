@@ -8,11 +8,13 @@ Run all environment checks and report status. Use this before running `/extracti
 
 ## How to run
 
-The entire pre-flight is **3 steps**:
+The entire pre-flight is **5 steps**:
 
 1. **One bash script** — checks all system dependencies
 2. **Two Figma MCP calls** — checks Desktop MCP and Remote MCP separately
 3. Claude reads all output and builds the status block
+4. **Prompt user** — if optional tools are missing, ask if they want them installed automatically
+5. **Auto-install** — run install commands for everything the user confirmed, then show the updated report
 
 ---
 
@@ -81,11 +83,11 @@ fi
 if [ -d ".screenshots" ]; then echo "SCREENSHOTS=ok"
 else mkdir -p .screenshots && echo "SCREENSHOTS=created"; fi
 
-# 6. figma-paths.yaml (support both root and _docs)
-if [ -f "figma-paths.yaml" ]; then
-  echo "YAML=ok (figma-paths.yaml)"
-elif [ -f "_docs/figma-paths.yaml" ]; then
+# 6. figma-paths.yaml (canonical location is _docs/, root is legacy fallback)
+if [ -f "_docs/figma-paths.yaml" ]; then
   echo "YAML=ok (_docs/figma-paths.yaml)"
+elif [ -f "figma-paths.yaml" ]; then
+  echo "YAML=ok (figma-paths.yaml)"
 else
   echo "YAML=missing"
 fi
@@ -239,6 +241,59 @@ the design system page back to Figma.
 
 To enable write-back, ensure the remote Figma MCP is connected (Step 3 above).
 ```
+
+---
+
+## Step 5 — Auto-install missing optional tools
+
+After collecting all results from Steps 1–4, check whether any optional tools are missing. Optional tools are anything marked ⚠️ — they do not block setup but improve the workflow significantly.
+
+**What can be auto-installed:**
+
+| Missing item | Install command |
+|---|---|
+| pixelmatch + pngjs | `npm install -D pixelmatch pngjs` |
+| @axe-core/playwright | `npm install -D @axe-core/playwright` |
+| jq | `brew install jq` (macOS only) |
+| Playwright + Chromium | `npm install -D @playwright/test && npx playwright install chromium` |
+| ralph-stop hook | Copy + chmod (see below) |
+
+**If one or more optional tools are missing AND the environment is local (not sandbox):**
+
+Use the **AskUserQuestion tool** with the following structure:
+
+- **question:** List exactly what's missing, for example:
+  ```
+  The following optional tools are not installed:
+    • pixelmatch + pngjs  — visual diff
+    • jq                  — ralph-loop hook
+
+  Install them now?
+  ```
+- **options:**
+  - `"Yes — install everything"` 
+  - `"No — I'll install manually"`
+  - `"Skip — continue without them"`
+
+- If the user picks **Yes** → run all applicable install commands (see table above), then re-run the affected checks and show an updated status block
+- If the user picks **No** or **Skip** → show the original status block with the ⚠️ warnings and the manual install commands shown beneath each item
+
+**ralph-stop hook special case:**
+
+The hook file is not an npm package — it must be copied from the figma-extractify template. Look for the source in these locations in order:
+
+1. `~/.claude/skills/extractify-setup/` (installed globally)
+2. A sibling `figma-extractify/` directory relative to the current project
+3. Not found → inform the user and skip (do not fail)
+
+If found:
+```bash
+mkdir -p .claude/hooks
+cp <source>/figma-extractify/.claude/hooks/ralph-stop.sh .claude/hooks/ralph-stop.sh
+chmod +x .claude/hooks/ralph-stop.sh
+```
+
+**In sandbox (Cowork) environment:** skip this entire step — installs must be done locally by the user.
 
 ---
 

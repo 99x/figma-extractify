@@ -14,18 +14,32 @@ Read:
 
 ## What it checks
 
-| Check | Required? | What fails if missing |
-|---|---|---|
-| Node.js v18.17+ | ✅ Required | Nothing works |
-| Figma Desktop MCP | ✅ Required | Cannot extract from Figma (Figma Desktop must be open in Dev Mode) |
-| Playwright + Chromium | ⚠️ Optional | Visual review loop (Ralph pattern) won't run |
-| Node dependencies (`node_modules/`) | ✅ Required | Dev server won't start |
-| `.screenshots/` directory | ⚠️ Optional | Auto-created if missing |
-| `_docs/figma-paths.yaml` | ✅ Required | `/extractify-setup` won't know which Figma pages to extract |
-| pixelmatch + pngjs | ⚠️ Optional | Visual diff falls back to AI-only comparison |
-| @axe-core/playwright | ⚠️ Optional | Accessibility audit will be skipped |
-| Ralph-loop stop hook | ⚠️ Optional | `/ralph-loop` won't enforce iteration limits |
-| generate_figma_design (write-back) | ⚠️ Optional | `/extractify-discover` runs in analysis-only mode |
+| Check | Required? | What fails if missing | Auto-installable? |
+|---|---|---|---|
+| Node.js v18.17+ | ✅ Required | Nothing works | No — user must install |
+| Figma Desktop MCP | ✅ Required | Cannot extract from Figma | No — open Figma Desktop |
+| Playwright + Chromium | ⚠️ Optional | Visual review loop won't run | ✅ Yes |
+| Node dependencies (`node_modules/`) | ✅ Required | Dev server won't start | ✅ Yes (`npm install`) |
+| `.screenshots/` directory | ⚠️ Optional | Auto-created if missing | ✅ Yes (auto) |
+| `_docs/figma-paths.yaml` | ✅ Required | `/extractify-setup` won't know which Figma pages to extract | No — run `/extractify-setup` |
+| pixelmatch + pngjs | ⚠️ Optional | Visual diff falls back to AI-only comparison | ✅ Yes |
+| @axe-core/playwright | ⚠️ Optional | Accessibility audit will be skipped | ✅ Yes |
+| Ralph-loop stop hook | ⚠️ Optional | `/ralph-loop` won't enforce iteration limits | ✅ Yes (copied from template) |
+| jq | ⚠️ Optional | Ralph stop hook cannot parse state | ✅ Yes (`brew install jq`) |
+| generate_figma_design (write-back) | ⚠️ Optional | `/extractify-discover` runs in analysis-only mode | No — requires Remote MCP auth |
+
+## Auto-install behaviour
+
+After showing the status block, if any optional tools are missing and the environment is local (not Cowork sandbox), the skill prompts the user:
+
+```
+The following optional tools are not installed:
+  • [list of missing items]
+
+Install them now? (yes / no / skip)
+```
+
+If the user says **yes**, all installable items are set up automatically and the status block is updated. If **no** or **skip**, the ⚠️ warnings remain with manual install commands shown.
 
 ## Output format
 
