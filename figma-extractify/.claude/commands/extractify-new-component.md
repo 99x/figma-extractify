@@ -34,7 +34,13 @@ Also read `_docs/learnings.md`.
 
 ## Phase 2 — Resolve the component and detect parent/child structure (orchestrator)
 
-Read `_docs/figma-paths.yaml` fully. Then resolve the component using this priority order:
+Resolve `FIGMA_PATHS_FILE` once before reading/saving component mappings:
+
+1. If `figma-paths.yaml` exists in the current project root, use it
+2. Else if `_docs/figma-paths.yaml` exists, use it
+3. Else create `figma-paths.yaml` in project root with the standard scaffold and use it
+
+Read `FIGMA_PATHS_FILE` fully. Then resolve the component using this priority order:
 
 ### Step 1 — Inspect the argument
 
@@ -42,11 +48,11 @@ Read `_docs/figma-paths.yaml` fully. Then resolve the component using this prior
   - Use it directly as the Figma URL
   - Derive the component name from the Figma frame name (via `get_design_context` in Phase 3)
   - Treat as a simple component — no children
-  - Save the URL to `figma-paths.yaml` under `components.<kebab-name>` after the name is known
+  - Save the URL to `FIGMA_PATHS_FILE` under `components.<kebab-name>` after the name is known
 
 - **If `$ARGUMENTS` is a component name** (e.g. `list-links`, `HeroBanner`):
   - Normalize to kebab-case (e.g. `HeroBanner` → `hero-banner`)
-  - Look up the entry in `figma-paths.yaml` under `components.<kebab-name>`
+  - Look up the entry in `FIGMA_PATHS_FILE` under `components.<kebab-name>`
   - The entry can be one of two formats:
     - **Simple** (`name: url`) → use the URL, no children, proceed to Phase 3
     - **Parent/child** (`name: { figma: url, children: {...} }`) → see Step 2 below
@@ -95,13 +101,13 @@ If the Figma URL could not be resolved automatically, gather inputs using AskUse
    - `Form`
    - `Other (I'll describe)` → ask for description as a follow-up message
 
-Only ask questions that are still unanswered — skip any already resolved from the argument or `figma-paths.yaml`.
+Only ask questions that are still unanswered — skip any already resolved from the argument or `FIGMA_PATHS_FILE`.
 
-If children are mentioned, ask for their Figma URLs and save the full parent/child structure to `figma-paths.yaml`.
+If children are mentioned, ask for their Figma URLs and save the full parent/child structure to `FIGMA_PATHS_FILE`.
 
-### Step 4 — Save to figma-paths.yaml
+### Step 4 — Save to FIGMA_PATHS_FILE
 
-After URLs are resolved (from argument, from `figma-paths.yaml`, or from the user), save the full structure back to `figma-paths.yaml`:
+After URLs are resolved (from argument, from `FIGMA_PATHS_FILE`, or from the user), save the full structure back to `FIGMA_PATHS_FILE`:
 
 - Simple component → `name: url`
 - Parent with children → full nested object with `figma:` and `children:`

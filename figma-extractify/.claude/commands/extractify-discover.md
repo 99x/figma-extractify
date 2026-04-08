@@ -642,7 +642,13 @@ Next steps:
   → Or manually point /extractify-setup steps to the new DS page in Figma
 ```
 
-Save the URL of the newly created Figma page to `_docs/figma-paths.yaml` under a new `design-system` key:
+Resolve `FIGMA_PATHS_FILE` once before saving discovery output:
+
+1. If `figma-paths.yaml` exists in the current project root, use it
+2. Else if `_docs/figma-paths.yaml` exists, use it
+3. Else create `figma-paths.yaml` in project root with the standard scaffold and use it
+
+Save the URL of the newly created Figma page to `FIGMA_PATHS_FILE` under a new `design-system` key:
 
 ```yaml
 design-system: <figma-url>

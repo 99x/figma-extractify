@@ -6,8 +6,14 @@ Maps a built component to its Figma design node so designers see real code in De
 
 - Component must exist in `src/components/<Name>/index.tsx`
 - Component must have passed compliance + visual review
-- Figma URL or node ID must exist in `_docs/figma-paths.yaml`
+- Figma URL or node ID must exist in the resolved `FIGMA_PATHS_FILE`
 - Figma Desktop MCP must be connected (Figma Desktop open in Dev Mode)
+
+Resolve `FIGMA_PATHS_FILE` once before Phase 1:
+
+1. If `figma-paths.yaml` exists in the current project root, use it
+2. Else if `_docs/figma-paths.yaml` exists, use it
+3. Else create `figma-paths.yaml` in project root with the standard scaffold and use it
 
 ---
 
@@ -19,7 +25,7 @@ Maps a built component to its Figma design node so designers see real code in De
 **If `$ARGUMENTS` is a component name:**
   1. Normalize the name: extract PascalCase for folder, kebab-case for lookup
   2. Verify `src/components/<PascalCase>/index.tsx` exists
-  3. Look up the Figma URL in `_docs/figma-paths.yaml` under `components.<kebab-case>`
+  3. Look up the Figma URL in `FIGMA_PATHS_FILE` under `components.<kebab-case>`
   4. If not found → ask the user for the Figma URL or node ID
 
 **If `$ARGUMENTS` is empty:**

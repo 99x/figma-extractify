@@ -15,7 +15,11 @@ Use this to detect drift — components that were built before a rule was added,
    - PostCSS file (if any): `src/assets/css/components/<kebab-name>.pcss`
 3. Read `src/app/page.tsx` to get the list of linked previews
 4. Read `src/assets/css/global.css` to get the list of imported PostCSS files
-5. Read `_docs/figma-paths.yaml` to get the component-to-Figma mapping
+5. Resolve `FIGMA_PATHS_FILE` once:
+   - `figma-paths.yaml` in project root if present
+   - else `_docs/figma-paths.yaml` if present
+   - else no mapping file (treat as unmapped warning set)
+6. If resolved, read `FIGMA_PATHS_FILE` to get the component-to-Figma mapping
 
 ---
 
@@ -55,7 +59,7 @@ After all per-component audits complete, the orchestrator checks:
 1. **Preview pages exist**: For each component in `src/components/`, verify `src/app/components/<kebab-name>/page.tsx` exists
 2. **Index links**: For each preview page, verify it is linked from `src/app/page.tsx`
 3. **PostCSS imports**: For each `.pcss` file in `src/assets/css/components/`, verify it is `@import`ed in `global.css`
-4. **Figma mapping**: For each component, check if `_docs/figma-paths.yaml` has an entry (warning, not error)
+4. **Figma mapping**: For each component, check if `FIGMA_PATHS_FILE` has an entry (warning, not error)
 
 ---
 
