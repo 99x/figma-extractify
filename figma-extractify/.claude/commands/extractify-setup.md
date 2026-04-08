@@ -19,7 +19,51 @@ Each of the 6 extraction steps runs as a **fresh subagent** so context from Step
 
 ## Phase 0 — Pre-flight check (run before anything else)
 
-Silently run all checks using **2 operations only**. Show the status block. Only proceed if all required checks pass.
+Silently run all checks using **3 operations only**. Show the status block. Only proceed if all required checks pass.
+
+---
+
+### Step 0 — Verify .mcp.json exists (before any MCP calls)
+
+Check for `.mcp.json` in the project root:
+
+```bash
+if [ -f ".mcp.json" ]; then
+  echo "MCP_CONFIG=ok"
+else
+  echo "MCP_CONFIG=missing"
+fi
+```
+
+If `MCP_CONFIG=missing`:
+
+1. **Auto-fix:** create `.mcp.json` using the Write tool:
+
+```json
+{
+  "mcpServers": {
+    "figma": {
+      "type": "http",
+      "url": "https://mcp.figma.com/mcp"
+    },
+    "figma-desktop": {
+      "type": "http",
+      "url": "http://127.0.0.1:3845/mcp"
+    }
+  }
+}
+```
+
+2. Stop and output:
+
+```
+⚠️  .mcp.json was missing — created with default Figma MCP config.
+
+    You need to restart your IDE (Claude Code / Cursor) so it picks up
+    the new MCP servers. Then run /extractify-setup again.
+```
+
+Do NOT continue — MCP servers are registered at IDE startup.
 
 ---
 
@@ -197,14 +241,31 @@ If ❌, stop entirely and output:
 ```
 ❌ Pre-flight failed — Figma Desktop MCP not reachable.
 
-The setup wizard requires Figma Desktop to be open in Dev Mode.
-The Desktop MCP runs automatically at http://127.0.0.1:3845/mcp — no API key needed.
+This usually means one of three things:
+
+  1. Figma Desktop is not running
+     → Open Figma Desktop and log in to your account.
+
+  2. Dev Mode is not enabled
+     → Open any Figma file, then press Shift+D (or click the
+       </> toggle in the bottom toolbar) to enable Dev Mode.
+
+  3. Dev Mode is not available on your plan
+     → Dev Mode requires a paid Figma plan (Professional, Organization,
+       or Enterprise). The free Starter plan does not include Dev Mode.
+     → Education plans include Dev Mode for free.
+     → Check your plan: Figma → Main menu → Help → Account settings
+     → More info: https://help.figma.com/hc/en-us/articles/15023124644247
+
+The Desktop MCP runs automatically at http://127.0.0.1:3845/mcp when
+Figma Desktop is open with Dev Mode active. No API key is needed.
 
 Steps to fix:
-  1. Open Figma Desktop and log in
+  1. Make sure Figma Desktop is open and you are logged in
   2. Open any Figma file
-  3. Enable Dev Mode (Shift+D or bottom toolbar)
-  4. Run /extractify-setup again
+  3. Enable Dev Mode (Shift+D)
+  4. Restart Claude Code / Cursor (MCP connections are established at startup)
+  5. Run /extractify-setup again
 ```
 
 ---
@@ -217,6 +278,7 @@ Show this before the wizard greeting. Adjust each line to reflect actual results
 Pre-flight check
 ────────────────────────────────────
   ✅  Node.js                   v20.x.x
+  ✅  .mcp.json                 found (figma + figma-desktop)
   ✅  Figma Desktop MCP         connected
   ✅  Playwright + Chromium     ready (v1.x.x)
   ✅  Node dependencies         installed
