@@ -4,6 +4,8 @@ A boilerplate for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
 **Built for teams who want pixel-perfect components out of Figma without the manual handoff.**
 
+**Watch the walkthrough** to see everything in action: [figma-extractify.mp4](https://99xtech-my.sharepoint.com/:v:/g/personal/flavio_troszczanczuk_99x_io/IQDtzlCuetHxSq2-cZL4HodGAd2sc5C3l4alqb0NUOn8gns?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=dJqq3a)
+
 ---
 
 ## What This Does
@@ -46,69 +48,55 @@ Done. Open http://localhost:3000/components/hero-banner to preview.
 
 ## Installation
 
-### Repo structure
+### Recommended setup
 
-When you clone this repo you get a **monorepo** with two sibling folders:
-
-```
-figma-extractify/          ← repo root
-├── figma-extractify/      ← the AI skill system (this project)
-│   ├── install.sh
-│   ├── _docs/
-│   └── .claude/
-└── boilerplate/           ← Next.js starter (package.json lives here)
-```
-
-**Important:** `install.sh` must be run from inside `figma-extractify/figma-extractify/`, not from the repo root.
-
-### One-command setup (monorepo)
+Open the `boilerplate/` folder in your IDE (Claude Code, Cursor, etc.), copy the `figma-extractify/` folder into it, and run the installer:
 
 ```bash
-git clone https://github.com/your-org/figma-extractify.git
-cd figma-extractify/figma-extractify   # ← go one level deeper
-bash install.sh
+# From inside the boilerplate/ folder:
+bash figma-extractify/install.sh
 ```
 
 The installer will:
 - Check Node.js v18.17+
-- Detect the monorepo layout and run `npm install` inside `boilerplate/` automatically
+- Run `npm install` for your project dependencies
 - Optionally install the visual QA toolchain (Playwright, pixelmatch, axe-core)
 - Copy `/extractify-*` commands to `~/.claude/commands/`
 - Copy `extractify-*` skills to `~/.claude/skills/`
+- Copy `_docs/` (contracts + figma-paths.yaml) to your project root
+- Copy `scripts/` (visual-diff + a11y-audit) to your project root
+- Copy project config files (`CLAUDE.md`, `.mcp.json`, `.claude/settings.json`, `.cursor/rules/`, `.windsurfrules`)
+- Ask if you want to delete the `figma-extractify/` folder (safe — all files have been copied)
 
-> **After installation, restart Claude Code or Cowork** so the new `/extractify-*` commands appear in the UI.
+After the installer finishes, **restart Claude Code / Cursor** so the new `/extractify-*` commands appear.
 
-### One-command setup (standalone)
+### Standalone setup (existing project)
 
 If you're installing Figma Extractify into an existing project (not the monorepo):
 
 ```bash
 # Copy the figma-extractify/ folder into your project root, then:
-cd your-project/figma-extractify
-bash install.sh
+bash figma-extractify/install.sh
 ```
 
-The installer detects `package.json` in the current directory and runs `npm install` there.
+The installer detects `package.json` in the current directory and installs from there.
 
-### Manual setup
+### Windows
 
-```bash
-# From the boilerplate/ directory (or your project root):
-npm install
+Double-click `install.bat` or run from PowerShell:
 
-# Optional — needed for visual diff + a11y audit:
-npm install -D pixelmatch pngjs @axe-core/playwright @playwright/test
-npx playwright install chromium
-
-# Copy commands and skills globally so Claude can find them:
-cp .claude/commands/extractify-*.md ~/.claude/commands/
-cp -r .claude/skills/extractify-* ~/.claude/skills/
+```powershell
+powershell -ExecutionPolicy Bypass -File figma-extractify\install.ps1
 ```
 
 ### Uninstall
 
 ```bash
+# macOS / Linux
 bash uninstall.sh
+
+# Windows — double-click uninstall.bat, or:
+powershell -ExecutionPolicy Bypass -File uninstall.ps1
 ```
 
 ---
@@ -130,8 +118,9 @@ Run these in **Claude Code** or **your preferred A.I.**:
 ### First-time workflow
 
 ```
-1. Add your Figma URLs to _docs/figma-paths.yaml
-2. Open Figma Desktop in Dev Mode
+1. Open Figma Desktop in Dev Mode (Shift+D)
+2. Add your Figma URLs to _docs/figma-paths.yaml
+   (or import example-file/example.fig to try with a sample file)
 3. npm run dev
 
 /extractify-preflight              ← verify your environment
@@ -190,8 +179,18 @@ Each URL maps to a page or frame in your file. Leave a field as `~` to skip it o
 ## Prerequisites
 
 - **Node.js** 18.17+
-- **Figma Desktop** open in Dev Mode (required for the MCP connection) (pro plan not required but recommended)
-- **Claude Code**
+- **Figma Desktop** open in Dev Mode (required for the MCP connection)
+- **Claude Code**, **Cursor**, or another AI IDE that supports MCP
+
+### About Figma Dev Mode
+
+Dev Mode is what powers the Figma Desktop MCP — it runs a local server at `http://127.0.0.1:3845/mcp` that gives Claude direct access to your design file.
+
+Dev Mode requires a **paid Figma plan** (Professional, Organization, or Enterprise). The free Starter plan does not include Dev Mode. Education plans include Dev Mode for free.
+
+To enable it: open any Figma file in the desktop app and press **Shift+D** (or click the `</>` toggle in the bottom toolbar).
+
+More info: [Figma Dev Mode plans](https://help.figma.com/hc/en-us/articles/15023124644247)
 
 Run `/extractify-preflight` before your first `/extractify-setup` to verify everything is ready.
 
