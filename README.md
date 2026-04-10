@@ -2,9 +2,16 @@
   <img src="banner.svg" alt="Figma Extractify" width="100%">
 </p>
 
-# Figma Extractify — Monorepo
+<p align="center">
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+  <a href="https://github.com/99x/figma-extractify/actions/workflows/ci.yml"><img src="https://github.com/99x/figma-extractify/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/99x/figma-extractify/issues"><img src="https://img.shields.io/github/issues/99x/figma-extractify.svg" alt="Issues"></a>
+  <a href="https://github.com/99x/figma-extractify/pulls"><img src="https://img.shields.io/github/issues-pr/99x/figma-extractify.svg" alt="Pull Requests"></a>
+</p>
 
-This repo contains three parts that work together but can be used separately.
+# Figma Extractify
+
+A monorepo with a Next.js + Tailwind boilerplate and a set of commands and rules to extract the design from Figma and translate it into code in a scalable way.
 
 **Watch the walkthrough** to see everything in action: [figma-extractify.mp4](https://99xtech-my.sharepoint.com/:v:/g/personal/flavio_troszczanczuk_99x_io/IQDtzlCuetHxSq2-cZL4HodGAd2sc5C3l4alqb0NUOn8gns?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=dJqq3a)
 
@@ -52,7 +59,7 @@ The recommended setup — clone the repo, run the installer, and start extractin
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/your-org/figma-extractify.git
+git clone https://github.com/99x/figma-extractify.git
 
 # 2. Open the boilerplate folder in your IDE (Claude Code, Cursor, etc.)
 cd figma-extractify/boilerplate
@@ -88,3 +95,19 @@ bash figma-extractify/install.sh
 **Just the boilerplate** — clone and use `boilerplate/` as your project root. No AI tooling required.
 
 **Just Figma Extractify** — copy the `figma-extractify/` folder into any existing Next.js project, then run `bash figma-extractify/install.sh` from inside it. It copies `.claude/`, `_docs/`, `scripts/`, `CLAUDE.md`, `.mcp.json`, and IDE config into your project without touching your source code.
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) before submitting a pull request.
+
+## Code of Conduct
+
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 [99x](https://99x.io).

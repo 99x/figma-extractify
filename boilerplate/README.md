@@ -51,11 +51,11 @@ public/
 
 ## Adding Figma Extractify
 
-To connect this boilerplate to your Figma file and extract design tokens automatically, install [Figma Extractify](https://github.com/your-org/figma-extractify) on top of it:
+To connect this boilerplate to your Figma file and extract design tokens automatically, install [Figma Extractify](https://github.com/99x/figma-extractify) on top of it:
 
 ```bash
 # from the root of this project
-bash <(curl -fsSL https://raw.githubusercontent.com/your-org/figma-extractify/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/99x/figma-extractify/main/install.sh)
 ```
 
 ---
