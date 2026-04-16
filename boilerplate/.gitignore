@@ -41,6 +41,9 @@ test-results/
 # Ralph Loop state
 .ralph-loop-state.json
 
+# Local Claude Code settings (contains user-specific absolute paths, never commit)
+.claude/settings.local.json
+
 # Figma asset exports
 .figma-assets/
 
