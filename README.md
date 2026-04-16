@@ -21,9 +21,9 @@ A monorepo with a Next.js + Tailwind boilerplate and a set of commands and rules
 
 ### [`figma-extractify/`](./figma-extractify)
 
-The AI skill system. Point it at any Figma file and extract your design tokens, build components with automated visual review, and link everything back to Figma Dev Mode.
+The AI command system. Point it at any Figma file and extract your design tokens, build components with automated visual review, and link everything back to Figma Dev Mode.
 
-Works with **Claude Code**, **Cowork**, **Cursor**, **Windsurf**, and **GitHub Copilot**. Does not require the boilerplate — install it into any existing project.
+Works with **Claude Code**, **Cursor**, **Windsurf**, and **GitHub Copilot**. Does not require the boilerplate — install it into any existing project.
 
 → [Read the Figma Extractify docs](./figma-extractify/README.md)
 
@@ -45,7 +45,7 @@ Contains `example.fig` — a sample Figma file you can import into your Figma ac
 
 ```
 figma-extractify/          ← repo root (clone lands here)
-├── figma-extractify/      ← the AI skill system — install.sh lives here
+├── figma-extractify/      ← the AI command system — install.sh lives here
 │   ├── install.sh
 │   ├── _docs/
 │   └── .claude/
@@ -72,8 +72,8 @@ bash figma-extractify/install.sh
 
 # The installer will:
 #   - Install npm dependencies
-#   - Copy /extractify-* commands to ~/.claude/commands/
-#   - Copy extractify-* skills to ~/.claude/skills/
+#   - Copy /extractify-* commands to <project>/.claude/commands/ (project-scoped)
+#   - Copy the figma-use skill to <project>/.claude/skills/ (required by use_figma)
 #   - Copy _docs/, scripts/, CLAUDE.md, .mcp.json, and IDE config to your project
 #   - Optionally install the visual QA toolchain (Playwright, pixelmatch, axe-core)
 #   - Ask if you want to delete the figma-extractify/ folder (safe to do — all files are copied)

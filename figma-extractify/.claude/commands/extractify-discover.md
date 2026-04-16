@@ -30,7 +30,7 @@ Read `_docs/structure/agent-architecture.md` for the full rationale on subagent 
 
 ### Step 1 — System check (same as /extractify-preflight)
 
-Run the same bash script from `/extractify-preflight`. Only Node.js and deps are blocking — Playwright/Chromium are not required for this skill.
+Run the same bash script from `/extractify-preflight`. Only Node.js and deps are blocking — Playwright/Chromium are not required for this command.
 
 ### Step 2 — Resolve Figma MCP for reads (Desktop preferred, Remote fallback)
 

@@ -25,26 +25,88 @@ for pkg in $QA_PKGS; do
   fi
 done
 
-# ── 2. Remove installed Claude commands ───────────────────────────────────────
-step "Removing Claude commands..."
+# ── Resolve project root (where commands/skills were installed) ───────────────
+# Mirror the install.sh logic: detect APP_ROOT from package.json location.
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GLOBAL_COMMANDS_DIR="$HOME/.claude/commands"
-for cmd_file in "$PROJECT_DIR/.claude/commands"/extractify-*.md "$PROJECT_DIR/.claude/commands"/ralph-loop.md; do
-  [ -f "$cmd_file" ] || continue
-  cmd_name=$(basename "$cmd_file")
-  target="$GLOBAL_COMMANDS_DIR/$cmd_name"
-  [ -f "$target" ] && rm "$target" && ok "Removed ~/.claude/commands/$cmd_name" || warn "$cmd_name not in ~/.claude/commands/, skipping"
-done
+APP_ROOT=""
+if [ -f "package.json" ]; then
+  APP_ROOT="$(pwd)"
+elif [ -f "../boilerplate/package.json" ]; then
+  APP_ROOT="$(cd ../boilerplate && pwd)"
+elif [ -f "boilerplate/package.json" ]; then
+  APP_ROOT="$(cd boilerplate && pwd)"
+fi
 
-# ── 3. Remove installed Cowork skills ────────────────────────────────────────
-step "Removing Cowork skills..."
-GLOBAL_SKILLS_DIR="$HOME/.claude/skills"
-for skill_dir in "$PROJECT_DIR/.claude/skills"/extractify-*/; do
-  [ -d "$skill_dir" ] || continue
-  skill_name=$(basename "$skill_dir")
-  target="$GLOBAL_SKILLS_DIR/$skill_name"
-  [ -d "$target" ] && rm -rf "$target" && ok "Removed ~/.claude/skills/$skill_name" || warn "$skill_name not in ~/.claude/skills/, skipping"
-done
+# ── 2. Remove installed Claude commands (project-local) ───────────────────────
+step "Removing Claude commands..."
+if [ -z "$APP_ROOT" ]; then
+  warn "No project root detected — skipping command removal."
+  warn "If commands live elsewhere, delete <project>/.claude/commands/extractify-*.md manually."
+else
+  LOCAL_COMMANDS_DIR="$APP_ROOT/.claude/commands"
+  for cmd_file in "$PROJECT_DIR/.claude/commands"/extractify-*.md "$PROJECT_DIR/.claude/commands"/ralph-loop.md; do
+    [ -f "$cmd_file" ] || continue
+    cmd_name=$(basename "$cmd_file")
+    target="$LOCAL_COMMANDS_DIR/$cmd_name"
+    [ -f "$target" ] && rm "$target" && ok "Removed .claude/commands/$cmd_name" || warn "$cmd_name not in $LOCAL_COMMANDS_DIR, skipping"
+  done
+fi
+
+# ── 3. Remove installed skills (project-local) ────────────────────────────────
+# Only figma-use is installed by the current installer. Older versions also
+# installed extractify-* skill trampolines — those are handled by the legacy
+# cleanup in step 3b below.
+step "Removing installed skills..."
+if [ -z "$APP_ROOT" ]; then
+  warn "No project root detected — skipping skill removal."
+  warn "If skills live elsewhere, delete <project>/.claude/skills/figma-use/ manually."
+else
+  LOCAL_SKILLS_DIR="$APP_ROOT/.claude/skills"
+  target="$LOCAL_SKILLS_DIR/figma-use"
+  if [ -d "$target" ]; then
+    rm -rf "$target"
+    ok "Removed .claude/skills/figma-use"
+  else
+    warn "figma-use not in $LOCAL_SKILLS_DIR, skipping"
+  fi
+  # Also clean up any leftover extractify-* skill trampolines from older installs
+  for stale_skill in "$LOCAL_SKILLS_DIR"/extractify-*/; do
+    [ -d "$stale_skill" ] || continue
+    rm -rf "$stale_skill"
+    ok "Removed leftover .claude/skills/$(basename "$stale_skill") (from earlier installer version)"
+  done
+fi
+
+# ── 3b. Remove any legacy global installs (from older installer versions) ─────
+# Earlier installer versions placed commands/skills in ~/.claude/. Clean those
+# up too so uninstall fully removes Figma Extractify regardless of when it was
+# installed. Runs unconditionally — legacy installs don't depend on APP_ROOT.
+step "Removing any legacy global installs..."
+LEGACY_COMMANDS_DIR="$HOME/.claude/commands"
+LEGACY_SKILLS_DIR="$HOME/.claude/skills"
+LEGACY_REMOVED=false
+
+if [ -d "$LEGACY_COMMANDS_DIR" ]; then
+  for legacy_cmd in "$LEGACY_COMMANDS_DIR"/extractify-*.md "$LEGACY_COMMANDS_DIR/ralph-loop.md"; do
+    [ -f "$legacy_cmd" ] || continue
+    rm "$legacy_cmd"
+    ok "Removed ~/.claude/commands/$(basename "$legacy_cmd")"
+    LEGACY_REMOVED=true
+  done
+fi
+
+if [ -d "$LEGACY_SKILLS_DIR" ]; then
+  for legacy_skill in "$LEGACY_SKILLS_DIR"/extractify-*/ "$LEGACY_SKILLS_DIR/figma-use/"; do
+    [ -d "$legacy_skill" ] || continue
+    rm -rf "$legacy_skill"
+    ok "Removed ~/.claude/skills/$(basename "$legacy_skill")"
+    LEGACY_REMOVED=true
+  done
+fi
+
+if [ "$LEGACY_REMOVED" = false ]; then
+  ok "No legacy global installs found"
+fi
 
 # ── 4. Remove runtime state files ─────────────────────────────────────────────
 step "Cleaning up runtime files..."

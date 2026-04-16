@@ -21,7 +21,7 @@ We will acknowledge your report within 48 hours and aim to provide a fix or miti
 
 ## Scope
 
-This policy covers the code in this repository, including the AI skill system (`figma-extractify/`), the Next.js boilerplate (`boilerplate/`), and any shell scripts or configuration files.
+This policy covers the code in this repository, including the AI command system (`figma-extractify/`), the Next.js boilerplate (`boilerplate/`), and any shell scripts or configuration files.
 
 Third-party dependencies are managed via npm. If you find a vulnerability in a dependency, please check if it has already been reported upstream before contacting us.
 

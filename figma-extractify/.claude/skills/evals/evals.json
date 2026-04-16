@@ -1,12 +1,12 @@
 {
-  "skill_name": "extractify-skills",
+  "skill_name": "extractify-commands",
   "evals": [
     {
       "id": 1,
       "prompt": "I've added all my Figma URLs to figma-paths.yaml and the dev server is running. How do I extract the colors and fonts from Figma into the codebase?",
-      "expected_output": "Triggers extractify-setup skill. Runs the 6-step token extraction wizard: colors → typography → grid → icons → buttons → form elements.",
+      "expected_output": "Triggers /extractify-setup command. Runs the 6-step token extraction wizard: colors → typography → grid → icons → buttons → form elements.",
       "assertions": [
-        { "id": "triggers-setup-skill", "description": "Uses the extractify-setup skill (not raw instructions)", "type": "manual" },
+        { "id": "triggers-setup-command", "description": "Runs the /extractify-setup command (not raw instructions)", "type": "manual" },
         { "id": "reads-command-file", "description": "Reads .claude/commands/extractify-setup.md before proceeding", "type": "manual" },
         { "id": "checks-figma-paths-yaml", "description": "Reads _docs/figma-paths.yaml to find the Figma URLs", "type": "manual" }
       ]
@@ -14,9 +14,9 @@
     {
       "id": 2,
       "prompt": "Build me the hero banner component from this Figma URL: https://www.figma.com/design/ABC123/MyProject?node-id=5-22",
-      "expected_output": "Triggers extractify-new-component skill. Spawns subagents for build → compliance → visual review phases. Produces a typed React component with preview page.",
+      "expected_output": "Triggers /extractify-new-component command. Spawns subagents for build → compliance → visual review phases. Produces a typed React component with preview page.",
       "assertions": [
-        { "id": "triggers-new-component-skill", "description": "Uses the extractify-new-component skill", "type": "manual" },
+        { "id": "triggers-new-component-command", "description": "Runs the /extractify-new-component command", "type": "manual" },
         { "id": "reads-component-contract", "description": "Reads _docs/front-end/04-component-contract.md", "type": "manual" },
         { "id": "reads-learnings", "description": "Reads _docs/learnings.md before writing code", "type": "manual" },
         { "id": "uses-next-image", "description": "Generated component uses <Image> from next/image, not bare <img>", "type": "manual" }
@@ -25,9 +25,9 @@
     {
       "id": 3,
       "prompt": "I've built a bunch of components over the past few weeks. Can you check if they all follow the project rules correctly?",
-      "expected_output": "Triggers extractify-audit skill. Scans all components in src/components/ and produces a compliance report at .audit/report.md.",
+      "expected_output": "Triggers /extractify-audit command. Scans all components in src/components/ and produces a compliance report at .audit/report.md.",
       "assertions": [
-        { "id": "triggers-audit-skill", "description": "Uses the extractify-audit skill", "type": "manual" },
+        { "id": "triggers-audit-command", "description": "Runs the /extractify-audit command", "type": "manual" },
         { "id": "scans-all-components", "description": "Lists all directories in src/components/ before auditing", "type": "manual" },
         { "id": "produces-report", "description": "Outputs a report with pass/fail per component", "type": "manual" }
       ]
@@ -35,9 +35,9 @@
     {
       "id": 4,
       "prompt": "My Figma file doesn't have a design system page yet — the designers just started building screens. Can you figure out what colors and fonts they're using?",
-      "expected_output": "Triggers extractify-discover skill. Scans all pages of the Figma file, extracts tokens from actual designs, and produces discovered-tokens.yaml.",
+      "expected_output": "Triggers /extractify-discover command. Scans all pages of the Figma file, extracts tokens from actual designs, and produces discovered-tokens.yaml.",
       "assertions": [
-        { "id": "triggers-discover-skill", "description": "Uses the extractify-discover skill (not setup)", "type": "manual" },
+        { "id": "triggers-discover-command", "description": "Runs the /extractify-discover command (not setup)", "type": "manual" },
         { "id": "reads-command-file", "description": "Reads .claude/commands/extractify-discover.md", "type": "manual" },
         { "id": "asks-for-figma-url", "description": "Asks for the Figma file URL if not provided", "type": "manual" }
       ]
@@ -45,9 +45,9 @@
     {
       "id": 5,
       "prompt": "The hero component is done and approved. I want the designers to see the actual React props when they inspect it in Figma Dev Mode.",
-      "expected_output": "Triggers extractify-code-connect skill. Maps the hero component to its Figma node and creates a .figma-connect.ts file.",
+      "expected_output": "Triggers /extractify-code-connect command. Maps the hero component to its Figma node and creates a .figma-connect.ts file.",
       "assertions": [
-        { "id": "triggers-code-connect-skill", "description": "Uses the extractify-code-connect skill", "type": "manual" },
+        { "id": "triggers-code-connect-command", "description": "Runs the /extractify-code-connect command", "type": "manual" },
         { "id": "reads-command-file", "description": "Reads .claude/commands/extractify-code-connect.md", "type": "manual" },
         { "id": "produces-connect-file", "description": "Creates or describes creating a .figma-connect.ts file", "type": "manual" }
       ]

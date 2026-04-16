@@ -95,17 +95,25 @@ else
   warn "Skipped — visual diff and a11y audit won't be available (run /extractify-preflight to re-check later)"
 fi
 
-# ── 4. Install Claude commands + Cowork skills ────────────────────────────────
-# Claude Code and Cowork read commands/skills from ~/.claude/ in your home directory.
-# This step copies everything there so /extractify-* commands appear in the UI.
-#
-# NOTE: Commands live in .claude/commands/ — NOT just skills. Both must be copied.
-step "Installing Claude commands and Cowork skills..."
-GLOBAL_COMMANDS_DIR="$HOME/.claude/commands"
-GLOBAL_SKILLS_DIR="$HOME/.claude/skills"
+# ── 4. Install Claude commands + figma-use skill (project-local) ──────────────
+# Claude Code reads commands/skills from <project>/.claude/{commands,skills}/.
+# Installing project-local (instead of ~/.claude/) scopes them to THIS project,
+# so /extractify-* commands don't appear in unrelated projects where _docs/
+# doesn't exist and the commands would fail.
+step "Installing Claude commands and figma-use skill..."
 
-mkdir -p "$GLOBAL_COMMANDS_DIR"
-mkdir -p "$GLOBAL_SKILLS_DIR"
+if [ -z "$APP_ROOT" ]; then
+  err "No project root detected (no package.json found nearby)."
+  err "Commands and skills install into <project>/.claude/ — a project is required."
+  err "Run install.sh from inside your project, or alongside the boilerplate/ folder."
+  exit 1
+fi
+
+LOCAL_COMMANDS_DIR="$APP_ROOT/.claude/commands"
+LOCAL_SKILLS_DIR="$APP_ROOT/.claude/skills"
+
+mkdir -p "$LOCAL_COMMANDS_DIR"
+mkdir -p "$LOCAL_SKILLS_DIR"
 
 # ── 4a. Commands (.claude/commands/*.md) ──────────────────────────────────────
 COMMANDS_SRC="$PROJECT_DIR/.claude/commands"
@@ -115,8 +123,8 @@ if [ -d "$COMMANDS_SRC" ]; then
   for cmd_file in "$COMMANDS_SRC"/extractify-*.md "$COMMANDS_SRC"/ralph-loop.md; do
     [ -f "$cmd_file" ] || continue
     cmd_name=$(basename "$cmd_file")
-    cp "$cmd_file" "$GLOBAL_COMMANDS_DIR/"
-    ok "Installed command: $cmd_name → ~/.claude/commands/$cmd_name"
+    cp "$cmd_file" "$LOCAL_COMMANDS_DIR/"
+    ok "Installed command: $cmd_name → .claude/commands/$cmd_name"
     COMMANDS_FOUND=true
   done
 fi
@@ -126,7 +134,11 @@ if [ "$COMMANDS_FOUND" = false ]; then
   warn "Clone the repo with git to get the full command set."
 fi
 
-# ── 4b. Skills (.claude/skills/ or skills/) ───────────────────────────────────
+# ── 4b. Skills (.claude/skills/) ──────────────────────────────────────────────
+# Only figma-use is installed as a skill — it's the mandatory prerequisite for
+# every use_figma tool call (see _docs/SKILL.md). The /extractify-* workflows
+# are pure slash commands; they don't need skill wrappers. The evals/ directory
+# is intentionally skipped — it holds internal eval data, not a skill.
 SKILL_SOURCES=(
   "$PROJECT_DIR/.claude/skills"
   "$PROJECT_DIR/skills"
@@ -135,23 +147,53 @@ SKILL_SOURCES=(
 SKILLS_FOUND=false
 
 for SRC in "${SKILL_SOURCES[@]}"; do
-  if [ -d "$SRC" ]; then
-    for skill_dir in "$SRC"/extractify-*/; do
-      [ -d "$skill_dir" ] || continue
-      skill_name=$(basename "$skill_dir")
-      cp -r "$skill_dir" "$GLOBAL_SKILLS_DIR/"
-      ok "Installed skill: $skill_name → ~/.claude/skills/$skill_name"
-      SKILLS_FOUND=true
-    done
+  if [ -d "$SRC/figma-use" ]; then
+    cp -r "$SRC/figma-use" "$LOCAL_SKILLS_DIR/"
+    ok "Installed skill: figma-use → .claude/skills/figma-use"
+    SKILLS_FOUND=true
+    break
   fi
 done
 
 if [ "$SKILLS_FOUND" = false ]; then
-  warn "No extractify-* skills found — skills directory may be missing"
+  warn "figma-use skill not found — use_figma calls will fail without it"
   warn "Clone the repo with git to get the full skill set."
 fi
 
-# ── 4c. Ralph Loop stop hook (project-local) ──────────────────────────────────
+# ── 4c. Migrate legacy global installs (one-shot cleanup) ─────────────────────
+# Earlier versions of this installer copied commands/skills into ~/.claude/,
+# which made /extractify-* commands appear in every project on the user's
+# machine — even ones without _docs/ where the commands can't run. Detect and
+# remove those orphans so users upgrading don't end up with two copies.
+LEGACY_COMMANDS_DIR="$HOME/.claude/commands"
+LEGACY_SKILLS_DIR="$HOME/.claude/skills"
+LEGACY_FOUND=false
+
+if [ -d "$LEGACY_COMMANDS_DIR" ]; then
+  for legacy_cmd in "$LEGACY_COMMANDS_DIR"/extractify-*.md "$LEGACY_COMMANDS_DIR/ralph-loop.md"; do
+    [ -f "$legacy_cmd" ] || continue
+    if [ "$LEGACY_FOUND" = false ]; then
+      step "Removing legacy global install (now project-local)..."
+      LEGACY_FOUND=true
+    fi
+    rm "$legacy_cmd"
+    ok "Removed ~/.claude/commands/$(basename "$legacy_cmd")"
+  done
+fi
+
+if [ -d "$LEGACY_SKILLS_DIR" ]; then
+  for legacy_skill in "$LEGACY_SKILLS_DIR"/extractify-*/ "$LEGACY_SKILLS_DIR/figma-use/"; do
+    [ -d "$legacy_skill" ] || continue
+    if [ "$LEGACY_FOUND" = false ]; then
+      step "Removing legacy global install (now project-local)..."
+      LEGACY_FOUND=true
+    fi
+    rm -rf "$legacy_skill"
+    ok "Removed ~/.claude/skills/$(basename "$legacy_skill")"
+  done
+fi
+
+# ── 4d. Ralph Loop stop hook (project-local) ──────────────────────────────────
 step "Installing Ralph Loop stop hook..."
 HOOK_SRC="$PROJECT_DIR/.claude/hooks/ralph-stop.sh"
 
@@ -331,7 +373,7 @@ echo -e "  ${BOLD}1.${NC} Add your Figma URLs → ${YELLOW}_docs/figma-paths.yam
 echo -e "  ${BOLD}2.${NC} Connect to Figma — either:"
 echo -e "       • Open Figma Desktop in Dev Mode (preferred — runs at 127.0.0.1:3845)"
 echo -e "       • Or approve the Remote MCP OAuth prompt in your IDE (fallback — mcp.figma.com)"
-echo -e "  ${BOLD}3.${NC} ${BOLD}Restart Claude Code / Cowork${NC} so the new commands appear"
+echo -e "  ${BOLD}3.${NC} ${BOLD}Restart Claude Code${NC} so the new commands appear"
 echo -e "  ${BOLD}4.${NC} Start the dev server → ${YELLOW}npm run dev${NC} (from boilerplate/ if using the monorepo)"
 echo -e "  ${BOLD}5.${NC} Extract design tokens → ${YELLOW}/extractify-setup${NC}"
 echo ""

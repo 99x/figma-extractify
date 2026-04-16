@@ -63,7 +63,7 @@ Open an [issue](https://github.com/99x/figma-extractify/issues/new?template=feat
 
 This is a monorepo with three parts:
 
-- `figma-extractify/` — the AI skill system (shell scripts, YAML configs, prompt templates).
+- `figma-extractify/` — the AI command system (shell scripts, YAML configs, prompt templates).
 - `boilerplate/` — the Next.js + Tailwind starter (TypeScript, React).
 - `example-file/` — sample Figma file for testing.
 

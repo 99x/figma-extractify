@@ -1,0 +1,6 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local Claude Code settings (contains user-specific absolute paths, never commit)
+.claude/settings.local.json

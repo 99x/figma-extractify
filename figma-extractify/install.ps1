@@ -98,13 +98,25 @@ if ($INSTALL_QA -match '^[Yy]$') {
     warn "Skipped — visual diff and a11y audit won't be available (run /extractify-preflight to re-check later)"
 }
 
-# ── 4. Install Claude commands + Cowork skills ────────────────────────────────
-step "Installing Claude commands and Cowork skills..."
-$GLOBAL_COMMANDS_DIR = Join-Path $HOME ".claude" "commands"
-$GLOBAL_SKILLS_DIR   = Join-Path $HOME ".claude" "skills"
+# ── 4. Install Claude commands + figma-use skill (project-local) ──────────────
+# Claude Code reads commands/skills from <project>\.claude\{commands,skills}\.
+# Installing project-local (instead of ~\.claude\) scopes them to THIS project,
+# so /extractify-* commands don't appear in unrelated projects where _docs\
+# doesn't exist and the commands would fail.
+step "Installing Claude commands and figma-use skill..."
 
-New-Item -ItemType Directory -Force -Path $GLOBAL_COMMANDS_DIR | Out-Null
-New-Item -ItemType Directory -Force -Path $GLOBAL_SKILLS_DIR   | Out-Null
+if (-not $APP_ROOT) {
+    err "No project root detected (no package.json found nearby)."
+    err "Commands and skills install into <project>\.claude\ — a project is required."
+    err "Run install.ps1 from inside your project, or alongside the boilerplate\ folder."
+    exit 1
+}
+
+$LOCAL_COMMANDS_DIR = Join-Path $APP_ROOT ".claude" "commands"
+$LOCAL_SKILLS_DIR   = Join-Path $APP_ROOT ".claude" "skills"
+
+New-Item -ItemType Directory -Force -Path $LOCAL_COMMANDS_DIR | Out-Null
+New-Item -ItemType Directory -Force -Path $LOCAL_SKILLS_DIR   | Out-Null
 
 # ── 4a. Commands (.claude/commands/*.md) ──────────────────────────────────────
 $COMMANDS_SRC   = Join-Path $PROJECT_DIR ".claude" "commands"
@@ -114,8 +126,8 @@ if (Test-Path $COMMANDS_SRC) {
     $patterns = @("extractify-*.md", "ralph-loop.md")
     foreach ($pattern in $patterns) {
         Get-ChildItem -Path $COMMANDS_SRC -Filter $pattern -ErrorAction SilentlyContinue | ForEach-Object {
-            Copy-Item $_.FullName -Destination $GLOBAL_COMMANDS_DIR -Force
-            ok "Installed command: $($_.Name) → ~/.claude/commands/$($_.Name)"
+            Copy-Item $_.FullName -Destination $LOCAL_COMMANDS_DIR -Force
+            ok "Installed command: $($_.Name) → .claude\commands\$($_.Name)"
             $COMMANDS_FOUND = $true
         }
     }
@@ -126,7 +138,11 @@ if (-not $COMMANDS_FOUND) {
     warn "Clone the repo with git to get the full command set."
 }
 
-# ── 4b. Skills (.claude/skills/ or skills/) ───────────────────────────────────
+# ── 4b. Skills (.claude/skills/) ──────────────────────────────────────────────
+# Only figma-use is installed as a skill — it's the mandatory prerequisite for
+# every use_figma tool call (see _docs\SKILL.md). The /extractify-* workflows
+# are pure slash commands; they don't need skill wrappers. The evals\ directory
+# is intentionally skipped — it holds internal eval data, not a skill.
 $SKILL_SOURCES = @(
     (Join-Path $PROJECT_DIR ".claude" "skills"),
     (Join-Path $PROJECT_DIR "skills")
@@ -134,21 +150,58 @@ $SKILL_SOURCES = @(
 $SKILLS_FOUND = $false
 
 foreach ($SRC in $SKILL_SOURCES) {
-    if (Test-Path $SRC) {
-        Get-ChildItem -Path $SRC -Directory -Filter "extractify-*" -ErrorAction SilentlyContinue | ForEach-Object {
-            Copy-Item $_.FullName -Destination $GLOBAL_SKILLS_DIR -Recurse -Force
-            ok "Installed skill: $($_.Name) → ~/.claude/skills/$($_.Name)"
-            $SKILLS_FOUND = $true
-        }
+    $figmaUseSrc = Join-Path $SRC "figma-use"
+    if (Test-Path $figmaUseSrc) {
+        Copy-Item $figmaUseSrc -Destination $LOCAL_SKILLS_DIR -Recurse -Force
+        ok "Installed skill: figma-use → .claude\skills\figma-use"
+        $SKILLS_FOUND = $true
+        break
     }
 }
 
 if (-not $SKILLS_FOUND) {
-    warn "No extractify-* skills found — skills directory may be missing"
+    warn "figma-use skill not found — use_figma calls will fail without it"
     warn "Clone the repo with git to get the full skill set."
 }
 
-# ── 4c. Ralph Loop stop hook (project-local) ──────────────────────────────────
+# ── 4c. Migrate legacy global installs (one-shot cleanup) ─────────────────────
+# Earlier versions of this installer copied commands/skills into ~\.claude\,
+# which made /extractify-* commands appear in every project on the user's
+# machine — even ones without _docs\ where the commands can't run. Detect and
+# remove those orphans so users upgrading don't end up with two copies.
+$LEGACY_COMMANDS_DIR = Join-Path $HOME ".claude" "commands"
+$LEGACY_SKILLS_DIR   = Join-Path $HOME ".claude" "skills"
+$LEGACY_FOUND = $false
+
+if (Test-Path $LEGACY_COMMANDS_DIR) {
+    $legacyPatterns = @("extractify-*.md", "ralph-loop.md")
+    foreach ($pattern in $legacyPatterns) {
+        Get-ChildItem -Path $LEGACY_COMMANDS_DIR -Filter $pattern -ErrorAction SilentlyContinue | ForEach-Object {
+            if (-not $LEGACY_FOUND) {
+                step "Removing legacy global install (now project-local)..."
+                $LEGACY_FOUND = $true
+            }
+            Remove-Item $_.FullName -Force
+            ok "Removed ~\.claude\commands\$($_.Name)"
+        }
+    }
+}
+
+if (Test-Path $LEGACY_SKILLS_DIR) {
+    $legacySkillFilters = @("extractify-*", "figma-use")
+    foreach ($filter in $legacySkillFilters) {
+        Get-ChildItem -Path $LEGACY_SKILLS_DIR -Directory -Filter $filter -ErrorAction SilentlyContinue | ForEach-Object {
+            if (-not $LEGACY_FOUND) {
+                step "Removing legacy global install (now project-local)..."
+                $LEGACY_FOUND = $true
+            }
+            Remove-Item $_.FullName -Recurse -Force
+            ok "Removed ~\.claude\skills\$($_.Name)"
+        }
+    }
+}
+
+# ── 4d. Ralph Loop stop hook (project-local) ──────────────────────────────────
 step "Installing Ralph Loop stop hook..."
 $HOOK_SRC = Join-Path $PROJECT_DIR ".claude" "hooks" "ralph-stop.sh"
 
@@ -353,7 +406,7 @@ Write-Host "  1. Add your Figma URLs → " -NoNewline; Write-Host "_docs\figma-p
 Write-Host "  2. Connect to Figma — either:"
 Write-Host "       - Open Figma Desktop in Dev Mode (preferred - runs at 127.0.0.1:3845)"
 Write-Host "       - Or approve the Remote MCP OAuth prompt in your IDE (fallback - mcp.figma.com)"
-Write-Host "  3. " -NoNewline; Write-Host "Restart Claude Code / Cowork" -NoNewline -ForegroundColor White; Write-Host " so the new commands appear"
+Write-Host "  3. " -NoNewline; Write-Host "Restart Claude Code" -NoNewline -ForegroundColor White; Write-Host " so the new commands appear"
 Write-Host "  4. Start the dev server → " -NoNewline; Write-Host "npm run dev" -ForegroundColor Yellow -NoNewline; Write-Host " (from boilerplate\ if using the monorepo)"
 Write-Host "  5. Extract design tokens → " -NoNewline; Write-Host "/extractify-setup" -ForegroundColor Yellow
 Write-Host ""

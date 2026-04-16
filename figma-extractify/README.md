@@ -61,8 +61,8 @@ The installer will:
 - Check Node.js v18.17+
 - Run `npm install` for your project dependencies
 - Optionally install the visual QA toolchain (Playwright, pixelmatch, axe-core)
-- Copy `/extractify-*` commands to `~/.claude/commands/`
-- Copy `extractify-*` skills to `~/.claude/skills/`
+- Copy `/extractify-*` commands to `<project>/.claude/commands/` (project-scoped — won't leak into other projects)
+- Copy the `figma-use` skill to `<project>/.claude/skills/` (required prerequisite for any `use_figma` tool call)
 - Copy `_docs/` (contracts + figma-paths.yaml) to your project root
 - Copy `scripts/` (visual-diff + a11y-audit) to your project root
 - Copy project config files (`CLAUDE.md`, `.mcp.json`, `.claude/settings.json`, `.cursor/rules/`, `.windsurfrules`)
@@ -188,7 +188,7 @@ Each URL maps to a page or frame in your file. Leave a field as `~` to skip it o
 
 ### About the two Figma MCP servers
 
-Figma Extractify works against either server. Both expose the same read tools (`get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`, Code Connect). Every skill resolves the server at run time — Desktop first, Remote as fallback — and fails preflight only if **both** are down.
+Figma Extractify works against either server. Both expose the same read tools (`get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`, Code Connect). Every command resolves the server at run time — Desktop first, Remote as fallback — and fails preflight only if **both** are down.
 
 **Figma Desktop MCP** (preferred)
 - Runs locally at `http://127.0.0.1:3845/mcp` whenever Figma Desktop is open with Dev Mode on.

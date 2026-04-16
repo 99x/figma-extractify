@@ -64,7 +64,7 @@ Both MCP servers expose the same read surface (`get_metadata`, `get_design_conte
 3. Fail only if **both** are unreachable.
 
 Differences to be aware of:
-- **Selection context** (no URL, uses the node currently selected in Figma Desktop) is Desktop-only. The extractify skills always pass an explicit URL, so Remote is fully viable for every read flow here.
+- **Selection context** (no URL, uses the node currently selected in Figma Desktop) is Desktop-only. The extractify commands always pass an explicit URL, so Remote is fully viable for every read flow here.
 - **Write-back via `generate_figma_design` is Remote-only** — see below.
 
 **`generate_figma_design` is remote MCP only**

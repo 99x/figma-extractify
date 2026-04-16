@@ -44,7 +44,7 @@ The entire pre-flight is **5 steps**:
 ## Step 1 — Run the system check script (single bash command)
 
 ```bash
-# Detect environment: Cowork runs in a Linux sandbox, Claude Code runs locally on macOS
+# Detect environment: Linux sandbox (container/remote) vs local macOS
 IS_LOCAL=false
 [ "$(uname)" = "Darwin" ] && IS_LOCAL=true
 
@@ -91,7 +91,7 @@ if $IS_LOCAL; then
   else echo "JQ=missing (run: brew install jq)"; fi
 
 else
-  # Cowork sandbox (Linux) — local system checks are not applicable
+  # Linux sandbox (container/remote) — local system checks are not applicable
   echo "NODE=sandbox"
   echo "PLAYWRIGHT=sandbox"
   echo "CHROMIUM=sandbox"
@@ -133,13 +133,13 @@ Interpret each output line:
 | `NODE=missing` | ❌ Install Node.js 18.17+ from https://nodejs.org |
 | `NODE=v16.x.x` (below v18.17) | ❌ Run `nvm install 20 && nvm use 20` |
 | `NODE=v18.17+` | ✅ |
-| `NODE=sandbox` | ✅ N/A — running in Cowork sandbox; check Node locally with `node --version` |
+| `NODE=sandbox` | ✅ N/A — running in a Linux sandbox; check Node locally with `node --version` |
 | `PLAYWRIGHT=install_failed` | ❌ Run `npm install -D @playwright/test` manually |
 | `PLAYWRIGHT=*` (any version) | ✅ |
-| `PLAYWRIGHT=sandbox` | ✅ N/A — Cowork sandbox; Playwright runs locally |
+| `PLAYWRIGHT=sandbox` | ✅ N/A — Linux sandbox; Playwright runs locally |
 | `CHROMIUM=install_failed` | ❌ Run `npx playwright install chromium` manually |
 | `CHROMIUM=ok` or `installed` | ✅ |
-| `CHROMIUM=sandbox` | ✅ N/A — Cowork sandbox |
+| `CHROMIUM=sandbox` | ✅ N/A — Linux sandbox |
 | `DEPS=missing` | ❌ Run `npm install` |
 | `DEPS=ok` | ✅ |
 | `SCREENSHOTS=ok` or `created` | ✅ |
@@ -229,7 +229,7 @@ Remote works for every read flow (colors, typography, components, screenshots,
 Code Connect) as long as you pass a Figma URL. You lose:
 
   • Reading the current Figma Desktop selection (no URL needed) — not used
-    by any /extractify-* skill today, so this does not affect the workflow.
+    by any /extractify-* command today, so this does not affect the workflow.
 
 To switch back to Desktop later:
   1. Open Figma Desktop and log in
@@ -243,7 +243,7 @@ To switch back to Desktop later:
 ```
 ❌ No Figma MCP server is reachable.
 
-The figma-extractify skills need at least one of:
+The figma-extractify commands need at least one of:
 
   • Figma Desktop MCP (http://127.0.0.1:3845/mcp)
     → Open Figma Desktop, log in, open any file, enable Dev Mode (Shift+D).
@@ -335,9 +335,8 @@ Use the **AskUserQuestion tool** with the following structure:
 
 The hook file is not an npm package — it must be copied from the figma-extractify template. Look for the source in these locations in order:
 
-1. `~/.claude/skills/extractify-setup/` (installed globally)
-2. A sibling `figma-extractify/` directory relative to the current project
-3. Not found → inform the user and skip (do not fail)
+1. A sibling `figma-extractify/` directory relative to the current project
+2. Not found → inform the user and skip (do not fail)
 
 If found:
 ```bash
@@ -346,7 +345,7 @@ cp <source>/figma-extractify/.claude/hooks/ralph-stop.sh .claude/hooks/ralph-sto
 chmod +x .claude/hooks/ralph-stop.sh
 ```
 
-**In sandbox (Cowork) environment:** skip this entire step — installs must be done locally by the user.
+**In a Linux sandbox environment:** skip this entire step — installs must be done locally by the user.
 
 ---
 
