@@ -7,7 +7,7 @@ Maps a built component to its Figma design node so designers see real code in De
 - Component must exist in `src/components/<Name>/index.tsx`
 - Component must have passed compliance + visual review
 - Figma URL or node ID must exist in the resolved `FIGMA_PATHS_FILE`
-- Figma Desktop MCP must be connected (Figma Desktop open in Dev Mode)
+- **At least one Figma MCP server** reachable (Desktop preferred, Remote fallback). Code Connect tools (`get_code_connect_map`, `get_code_connect_suggestions`, `add_code_connect_map`, `send_code_connect_mappings`) are available on both. Resolve the server using the same rule as `/extractify-preflight`: try Desktop candidates (`user-figma`, `user-Figma Desktop`, `figma-desktop`) first, then Remote (`plugin-figma-figma`, `figma`). Fail if both are down.
 
 Resolve `FIGMA_PATHS_FILE` once before Phase 1:
 

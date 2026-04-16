@@ -350,7 +350,9 @@ Write-Host "  Setup complete. Here's what to do next:" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
 Write-Host ""
 Write-Host "  1. Add your Figma URLs → " -NoNewline; Write-Host "_docs\figma-paths.yaml" -ForegroundColor Yellow
-Write-Host "  2. Open Figma Desktop in Dev Mode (required for MCP)"
+Write-Host "  2. Connect to Figma — either:"
+Write-Host "       - Open Figma Desktop in Dev Mode (preferred - runs at 127.0.0.1:3845)"
+Write-Host "       - Or approve the Remote MCP OAuth prompt in your IDE (fallback - mcp.figma.com)"
 Write-Host "  3. " -NoNewline; Write-Host "Restart Claude Code / Cowork" -NoNewline -ForegroundColor White; Write-Host " so the new commands appear"
 Write-Host "  4. Start the dev server → " -NoNewline; Write-Host "npm run dev" -ForegroundColor Yellow -NoNewline; Write-Host " (from boilerplate\ if using the monorepo)"
 Write-Host "  5. Extract design tokens → " -NoNewline; Write-Host "/extractify-setup" -ForegroundColor Yellow

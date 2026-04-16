@@ -81,7 +81,7 @@ After building the component or page, run the Ralph Loop if a Figma URL is avail
 ```
 1. SERVE    → npm run dev (ensure localhost:3000 is up)
 2. CAPTURE  → Playwright CLI: npx playwright screenshot --browser=chromium ...
-3. COMPARE  → Figma Desktop MCP: get_design_context or get_screenshot
+3. COMPARE  → Figma MCP (Desktop or Remote): get_design_context or get_screenshot
 4. EVALUATE → Compare layout, spacing, colors, typography, alignment
 5. REFINE   → Fix code → go back to CAPTURE
 6. COMPLETE → Visual match satisfactory or 5 iterations reached

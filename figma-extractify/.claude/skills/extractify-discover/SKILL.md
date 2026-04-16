@@ -17,9 +17,9 @@ Read:
 
 ## Prerequisites
 
-- Figma Desktop open with the desktop MCP server enabled (required for write-back to Figma)
-- Figma remote MCP for read access
-- Dev or Full seat on a paid Figma plan
+- **At least one Figma MCP** for reads — Desktop (`127.0.0.1:3845/mcp`) preferred, Remote (`mcp.figma.com/mcp`) as automatic fallback. Discovery fails only if both are down.
+- **Figma Remote MCP** additionally required for **write-back** (`generate_figma_design`) — this is Remote-only. Without it, discovery runs in analysis-only mode.
+- Dev or Full seat on a paid Figma plan (required for Desktop Dev Mode; Remote works via OAuth against any plan that has access to the file).
 
 ## Phases
 

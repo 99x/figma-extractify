@@ -221,52 +221,46 @@ Resolve `FIGMA_PATHS_FILE` once before Phase 1 and reuse it:
 
 ---
 
-### Step 2 — Check Figma Desktop MCP (one tool call)
+### Step 2 — Resolve Figma MCP (Desktop preferred, Remote fallback)
 
-First resolve the Desktop server id from the MCP servers available in the current environment.
+`/extractify-setup` reads from Figma using URLs stored in `_docs/figma-paths.yaml`, so either MCP server works. Desktop is preferred when available; if it's not, fall back to Remote. Fail only if **both** are down.
 
-Try these candidates in order and use the first one that exists:
+**Resolution:**
 
-- `user-figma`
-- `user-Figma Desktop`
-- `figma-desktop`
+1. **Try Desktop.** For each of `user-figma`, `user-Figma Desktop`, `figma-desktop`, call `get_metadata` on the first id that exists.
+   - Tool responds → ✅ Desktop available. Record `FIGMA_MCP=desktop:<id>` and proceed.
+2. **If Desktop failed, try Remote.** For each of `plugin-figma-figma`, `figma`, call `get_metadata`.
+   - Tool responds → ✅ Remote available. Record `FIGMA_MCP=remote:<id>` and proceed. Warn the user:
 
-Then attempt to call `get_metadata` using that resolved Desktop server id.
-
-- Tool responds (even with an error) → ✅ Figma Desktop MCP available
-- Tool not found / connection refused → ❌ Figma Desktop not running
-
-If ❌, stop entirely and output:
+     ```
+     ⚠️  Figma Desktop MCP unavailable — using Remote MCP as fallback.
+         Setup will continue; all read tools work over Remote with URLs.
+     ```
+3. **If both failed**, stop entirely and output:
 
 ```
-❌ Pre-flight failed — Figma Desktop MCP not reachable.
+❌ Pre-flight failed — no Figma MCP server is reachable.
 
-This usually means one of three things:
+Setup needs at least one of:
 
-  1. Figma Desktop is not running
-     → Open Figma Desktop and log in to your account.
+  • Figma Desktop MCP (http://127.0.0.1:3845/mcp)
+    → Open Figma Desktop, log in, open any file, enable Dev Mode (Shift+D).
+    → Dev Mode requires a paid Figma plan. More info:
+      https://help.figma.com/hc/en-us/articles/15023124644247
 
-  2. Dev Mode is not enabled
-     → Open any Figma file, then press Shift+D (or click the
-       </> toggle in the bottom toolbar) to enable Dev Mode.
-
-  3. Dev Mode is not available on your plan
-     → Dev Mode requires a paid Figma plan (Professional, Organization,
-       or Enterprise). The free Starter plan does not include Dev Mode.
-     → Education plans include Dev Mode for free.
-     → Check your plan: Figma → Main menu → Help → Account settings
-     → More info: https://help.figma.com/hc/en-us/articles/15023124644247
-
-The Desktop MCP runs automatically at http://127.0.0.1:3845/mcp when
-Figma Desktop is open with Dev Mode active. No API key is needed.
+  • Figma Remote MCP (https://mcp.figma.com/mcp)
+    → Uses OAuth — the IDE opens a browser prompt on first use.
+    → Verify .mcp.json has a "figma" entry pointing at https://mcp.figma.com/mcp.
 
 Steps to fix:
-  1. Make sure Figma Desktop is open and you are logged in
-  2. Open any Figma file
-  3. Enable Dev Mode (Shift+D)
-  4. Restart Claude Code / Cursor (MCP connections are established at startup)
-  5. Run /extractify-setup again
+  1. Enable at least one of the servers above
+  2. Restart Claude Code / Cursor — MCP connections are established at startup
+  3. Run /extractify-setup again
+
+For a full guided check, run /extractify-preflight.
 ```
+
+All subsequent `get_metadata` / `get_design_context` / `get_screenshot` / `get_variable_defs` calls in this workflow should be made against the resolved `FIGMA_MCP` server.
 
 ---
 
@@ -279,7 +273,7 @@ Pre-flight check
 ────────────────────────────────────
   ✅  Node.js                   v20.x.x
   ✅  .mcp.json                 found (figma + figma-desktop)
-  ✅  Figma Desktop MCP         connected
+  ✅  Figma MCP                 Desktop (primary)   ← or "Remote (fallback)"
   ✅  Playwright + Chromium     ready (v1.x.x)
   ✅  Node dependencies         installed
   ✅  .screenshots/             ready

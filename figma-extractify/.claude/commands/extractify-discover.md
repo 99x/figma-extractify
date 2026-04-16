@@ -8,9 +8,9 @@ Read `_docs/structure/agent-architecture.md` for the full rationale on subagent 
 
 ## Prerequisites
 
-- **Figma desktop app** with the desktop MCP server enabled (required for write-back)
-- **Figma remote MCP** for read access (link-based extraction)
-- Dev or Full seat on a paid Figma plan
+- **At least one Figma MCP server** reachable — Desktop (`127.0.0.1:3845/mcp`) is preferred for reads; Remote (`mcp.figma.com/mcp`) is the automatic fallback. Discovery reads from whichever is up.
+- **Figma Remote MCP** is additionally required for **write-back** (`generate_figma_design`). Without it, discovery runs in analysis-only mode — the scan still completes; just the automated push of the DS page back to Figma is skipped.
+- Dev or Full seat on a paid Figma plan (needed for Desktop Dev Mode; Remote uses OAuth against any plan that has the file).
 
 ## Model assignments
 
@@ -32,20 +32,15 @@ Read `_docs/structure/agent-architecture.md` for the full rationale on subagent 
 
 Run the same bash script from `/extractify-preflight`. Only Node.js and deps are blocking — Playwright/Chromium are not required for this skill.
 
-### Step 2 — Check Figma Desktop MCP (read access)
+### Step 2 — Resolve Figma MCP for reads (Desktop preferred, Remote fallback)
 
-First resolve the Desktop server id from the MCP servers available in the current environment.
+Discovery reads from whichever Figma MCP is available.
 
-Try these candidates in order and use the first one that exists:
+1. **Try Desktop.** For each of `user-figma`, `user-Figma Desktop`, `figma-desktop`, call `get_metadata` on the first id that exists. If it responds → ✅ use it. Record `FIGMA_MCP=desktop:<id>`.
+2. **Else try Remote.** For each of `plugin-figma-figma`, `figma`, call `get_metadata`. If it responds → ✅ use it. Record `FIGMA_MCP=remote:<id>` and warn: *"Figma Desktop MCP unavailable — using Remote for reads."*
+3. **If both fail** → ❌ stop with the same fix instructions shown by `/extractify-preflight` (see Step 3 of that command).
 
-- `user-figma`
-- `user-Figma Desktop`
-- `figma-desktop`
-
-Then try calling `get_metadata` using that resolved Desktop server id.
-
-- Tool responds (even with an error) → ✅ Figma Desktop MCP available
-- Tool not found / connection refused → ❌ Stop with setup instructions (same as `/extractify-preflight`)
+Use the resolved server for every read call in Phases 1–4 (`get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`).
 
 ### Step 3 — Check Figma write-back (remote MCP only)
 
@@ -105,7 +100,7 @@ Continue with analysis-only mode if the user agrees.
 Pre-flight check
 ────────────────────────────────────
   ✅  Node.js                   v20.x.x
-  ✅  Figma Desktop MCP         connected
+  ✅  Figma MCP                 Desktop (primary)   ← or "Remote (fallback)"
   ✅  generate_figma_design     available (write-back enabled)
   ✅  Node dependencies         installed
 

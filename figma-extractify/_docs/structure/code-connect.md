@@ -13,7 +13,7 @@ Instead of guessing which component to use or copying styles manually, designers
 
 ## Available MCP tools
 
-The project already has Figma Desktop MCP configured. Use these tools for Code Connect workflows:
+The project ships with both Figma MCP servers configured in `.mcp.json` — Desktop (preferred) and Remote (fallback). Both expose the Code Connect tools below; skills resolve whichever is available at run time.
 
 | Tool | Purpose |
 |---|---|

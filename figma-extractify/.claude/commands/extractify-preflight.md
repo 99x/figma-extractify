@@ -2,20 +2,42 @@
 
 Run all environment checks and report status. Use this before running `/extractify-setup` or `/extractify-new-component`.
 
-> **Note:** The visual review loop (Ralph Loop) requires **Figma Desktop MCP** and **Playwright + Chromium**. Both are checked below.
+> **Note:** The visual review loop (Ralph Loop) needs a working **Figma MCP** (Desktop OR Remote) and **Playwright + Chromium**. Both are checked below.
+
+---
+
+## Figma MCP resolution (Desktop preferred, Remote fallback)
+
+Every skill in this repo talks to Figma through an MCP server. Two are supported and both expose the same read tools (`get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`, Code Connect):
+
+| Server | ID candidates (try in order) | When it works |
+|---|---|---|
+| **Figma Desktop** (preferred) | `user-figma`, `user-Figma Desktop`, `figma-desktop` | Figma Desktop app is open with Dev Mode on (`http://127.0.0.1:3845/mcp`) |
+| **Figma Remote** (fallback) | `plugin-figma-figma`, `figma` | Logged in via OAuth in the IDE (`https://mcp.figma.com/mcp`) |
+
+**Resolution rule (used by every skill):**
+
+1. Try Desktop candidates first → call `get_metadata` on the first one that exists. If it responds, use it.
+2. If Desktop is unavailable, try Remote candidates → call `get_metadata`. If it responds, use it.
+3. If **both fail**, preflight fails and everything downstream stops with the fix block below.
+
+Desktop-only behaviors:
+- Reading the **current selection** (no URL needed) — Remote requires an explicit `fileKey` + `node-id`. All skills in this repo already pass URLs, so Remote is fully viable.
+
+Remote-only behaviors:
+- `generate_figma_design` (used by `/extractify-discover` write-back) — see Step 4.
 
 ---
 
 ## How to run
 
-The entire pre-flight is **6 steps**:
+The entire pre-flight is **5 steps**:
 
 1. **One bash script** — checks all system dependencies
 2. **Check `.mcp.json`** — verify MCP config exists, auto-create if missing
-3. **Check Figma Desktop MCP** — verify Dev Mode connection
-4. **Check Figma Remote MCP** — verify OAuth connection (non-blocking)
-5. **Check write-back** — verify `generate_figma_design` is available (non-blocking)
-6. **Auto-install** — prompt user to install missing optional tools
+3. **Resolve Figma MCP** — Desktop first, Remote fallback; fail only if both are down
+4. **Check write-back** — verify `generate_figma_design` on Remote (non-blocking)
+5. **Auto-install** — prompt user to install missing optional tools
 
 ---
 
@@ -180,112 +202,83 @@ If `MCP_CONFIG=ok`, also verify the file contains both `figma` and `figma-deskto
 
 ---
 
-## Step 3 — Check Figma Desktop MCP (required for extraction)
+## Step 3 — Resolve Figma MCP (Desktop preferred, Remote fallback)
 
-The Desktop MCP runs locally via Figma Desktop. It gives access to Dev Mode, variables, and component inspection. **No API key required** — it uses your logged-in Figma Desktop session.
+At least **one** Figma MCP server must be reachable. Desktop is preferred because it works offline against the file you have open; Remote is the fallback so the workflow keeps running when Desktop isn't available (headless environments, Dev Mode not enabled, Figma Desktop closed).
 
-First resolve the Desktop server id from the MCP servers available in the current environment.
+**Resolve each candidate and probe:**
 
-Try these candidates in order and use the first one that exists:
+1. **Try Desktop.** For each of `user-figma`, `user-Figma Desktop`, `figma-desktop`, call `get_metadata` using the first one that exists.
+   - Tool responds (even with an error) → ✅ `FIGMA_MCP=desktop:<resolved-id>`
+   - Tool not found / connection refused → Desktop unavailable, continue.
+2. **Try Remote.** For each of `plugin-figma-figma`, `figma`, call `get_metadata` using the first one that exists.
+   - Tool responds → ✅ `FIGMA_MCP=remote:<resolved-id>`
+   - Tool not found / 401 / auth error → Remote unavailable.
+3. **If both failed → ❌ blocking failure.**
 
-- `user-figma`
-- `user-Figma Desktop`
-- `figma-desktop`
+Downstream skills use the same resolution rule and pick whichever server this step found to work.
 
-Then attempt to call `get_metadata` using that resolved Desktop server id.
+**If Desktop succeeds** → proceed to Step 4 with `FIGMA_MCP=desktop:…`. You may also probe Remote (Step 4 covers write-back) — it's non-blocking.
 
-- Tool responds (even with an error) → ✅ Desktop MCP available
-- Tool not found / connection refused → ❌ Figma Desktop not running or not configured
-
-If ❌, stop entirely and output:
+**If only Remote succeeds** → ⚠️ warn the user and proceed with `FIGMA_MCP=remote:…`:
 
 ```
-❌ Figma Desktop MCP not reachable.
+⚠️  Figma Desktop MCP not reachable — falling back to Remote MCP.
 
-This usually means one of three things:
+Remote works for every read flow (colors, typography, components, screenshots,
+Code Connect) as long as you pass a Figma URL. You lose:
 
-  1. Figma Desktop is not running
-     → Open Figma Desktop and log in to your account.
+  • Reading the current Figma Desktop selection (no URL needed) — not used
+    by any /extractify-* skill today, so this does not affect the workflow.
 
-  2. Dev Mode is not enabled
-     → Open any Figma file, then press Shift+D (or click the
-       </> toggle in the bottom toolbar) to enable Dev Mode.
+To switch back to Desktop later:
+  1. Open Figma Desktop and log in
+  2. Open any file and enable Dev Mode (Shift+D) — requires a paid plan
+  3. Restart Claude Code / Cursor
+  4. Run /extractify-preflight again
+```
 
-  3. Dev Mode is not available on your plan
-     → Dev Mode requires a paid Figma plan (Professional, Organization,
-       or Enterprise). The free Starter plan does not include Dev Mode.
-     → Education plans include Dev Mode for free.
-     → Check your plan: Figma → Main menu → Help → Account settings
-     → More info: https://help.figma.com/hc/en-us/articles/15023124644247
+**If both failed** → ❌ stop and output:
 
-The Desktop MCP runs automatically at http://127.0.0.1:3845/mcp when
-Figma Desktop is open with Dev Mode active. No API key is needed.
+```
+❌ No Figma MCP server is reachable.
+
+The figma-extractify skills need at least one of:
+
+  • Figma Desktop MCP (http://127.0.0.1:3845/mcp)
+    → Open Figma Desktop, log in, open any file, enable Dev Mode (Shift+D).
+    → Dev Mode requires a paid Figma plan (Professional / Organization /
+      Enterprise), or a free Education plan.
+    → More info: https://help.figma.com/hc/en-us/articles/15023124644247
+
+  • Figma Remote MCP (https://mcp.figma.com/mcp)
+    → Uses OAuth — Claude Code / Cursor opens a browser prompt on first use.
+    → Make sure .mcp.json contains:
+
+      "figma": {
+        "type": "http",
+        "url": "https://mcp.figma.com/mcp"
+      }
+
+    → Do NOT add an X-Figma-Token header — it breaks the OAuth flow.
 
 Steps to fix:
-  1. Make sure Figma Desktop is open and you are logged in
-  2. Open any Figma file
-  3. Enable Dev Mode (Shift+D)
-  4. Restart Claude Code / Cursor (MCP connections are established at startup)
-  5. Run /extractify-preflight again
+  1. Enable at least one of the servers above
+  2. Restart Claude Code / Cursor — MCP connections are established at startup
+  3. Run /extractify-preflight again
 
-Still not working? Check if another process is using port 3845:
-  lsof -i :3845       (macOS/Linux)
+Still not working? Check if another process is using port 3845 (Desktop):
+  lsof -i :3845                 (macOS/Linux)
   netstat -ano | findstr 3845   (Windows)
 ```
 
 ---
 
-## Step 4 — Check Figma Remote MCP (required for discover and write-back)
-
-The Remote MCP runs at https://mcp.figma.com/mcp and uses **OAuth** — Claude Code handles the authentication handshake automatically on first use. No API key or token needed in the config.
-
-First resolve the Remote server id from the MCP servers available in the current environment.
-
-Try these candidates in order and use the first one that exists:
-
-- `plugin-figma-figma`
-- `figma`
-
-Then attempt to call `get_metadata` using that resolved Remote server id.
-
-- Tool responds (even with an error) → ✅ Remote MCP connected
-- Tool not found / 401 / auth error → ⚠️ Not authenticated (non-blocking for `/extractify-setup`)
-
-If ⚠️:
-
-```
-⚠️ Figma Remote MCP not authenticated.
-
-This is non-blocking — /extractify-setup only needs the Desktop MCP.
-Remote MCP is required for /extractify-discover write-back flows.
-
-Authentication uses OAuth (no API key needed). Claude Code opens a
-browser window to log in to Figma on first connection.
-
-Steps to fix:
-  1. Make sure .mcp.json contains a remote Figma entry:
-
-     "figma": {
-       "type": "http",
-       "url": "https://mcp.figma.com/mcp"
-     }
-
-  2. Restart Claude Code / Cursor — it will open a browser prompt
-  3. Log in to Figma and approve the OAuth connection
-  4. Run /extractify-preflight again
-
-⚠️  Do NOT add an X-Figma-Token header — it will break the OAuth flow.
-    Token-based auth (for CI) uses a Personal Access Token instead:
-    https://help.figma.com/hc/en-us/articles/8085703771159
-```
-
----
-
-## Step 5 — Check Figma write-back (optional — only for /extractify-discover)
+## Step 4 — Check Figma write-back (optional — only for /extractify-discover)
 
 `generate_figma_design` is only available on the **remote MCP**, not the desktop one.
 
-Use the same resolved Remote server id from Step 4, then attempt to call `generate_figma_design` with a minimal test payload.
+Resolve the Remote server id (candidates: `plugin-figma-figma`, `figma`) and attempt to call `generate_figma_design` with a minimal test payload.
 
 - Tool exists (even if it errors) → ✅ Write-back available
 - Tool not found → ⚠️ Write-back not available (non-blocking)
@@ -298,14 +291,15 @@ If ⚠️:
 /extractify-discover will still analyze your Figma file but won't push
 the design system page back to Figma.
 
-To enable write-back, ensure the remote Figma MCP is connected (Step 4 above).
+To enable write-back, ensure the remote Figma MCP is connected
+(restart the IDE, approve the OAuth prompt), then re-run this preflight.
 ```
 
 ---
 
-## Step 6 — Auto-install missing optional tools
+## Step 5 — Auto-install missing optional tools
 
-After collecting all results from Steps 1–5, check whether any optional tools are missing. Optional tools are anything marked ⚠️ — they do not block setup but improve the workflow significantly.
+After collecting all results from Steps 1–4, check whether any optional tools are missing. Optional tools are anything marked ⚠️ — they do not block setup but improve the workflow significantly.
 
 **What can be auto-installed:**
 
@@ -365,9 +359,10 @@ Pre-flight check
 ────────────────────────────────────
   ✅  Node.js                  v20.x.x
   ✅  .mcp.json                found (figma + figma-desktop)
-  ✅  Figma Desktop MCP        connected (Dev Mode active)
-  ✅  Figma Remote MCP         authenticated
-  ✅  generate_figma_design    available       ← only shown for /extractify-discover
+  ✅  Figma MCP                Desktop (primary)   ← or "Remote (fallback — Desktop unavailable)"
+  ⚠️   Figma Desktop MCP        unavailable         ← only shown when fallback is active
+  ✅  Figma Remote MCP         authenticated       ← shown when Remote is up (primary or secondary)
+  ✅  generate_figma_design    available           ← only shown for /extractify-discover
   ✅  Playwright + Chromium    ready (v1.x.x)
   ✅  Node dependencies        installed
   ✅  .screenshots/            ready
@@ -385,11 +380,12 @@ Use ✅ for pass, ❌ for blocking failure (stop and show fix instructions), ⚠
 
 Blocking failures:
 - Node.js
-- Figma Desktop MCP
+- **Figma MCP — both Desktop and Remote unavailable** (either one alone is enough to pass)
 - Playwright/Chromium install failures
 - Missing dependencies
 
 Non-blocking warnings:
-- Figma Remote MCP not authenticated
+- Figma Desktop MCP unavailable while Remote works (fallback active)
+- Figma Remote MCP not authenticated while Desktop works
 - generate_figma_design not available
 - Ralph-loop stop hook missing

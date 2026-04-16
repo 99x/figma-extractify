@@ -1,10 +1,10 @@
-## AI workflow (Figma Desktop MCP → codebase)
+## AI workflow (Figma MCP → codebase)
 
 ### Goal
 
 These docs exist so an AI can:
 
-- Extract **colors**, **typography**, **images**, **icons**, and **component specs** from Figma using the Figma Desktop MCP server
+- Extract **colors**, **typography**, **images**, **icons**, and **component specs** from Figma using a Figma MCP server — Desktop (`127.0.0.1:3845/mcp`) is preferred, Remote (`mcp.figma.com/mcp`) is the automatic fallback
 - Populate and extend the codebase using the same structure and conventions
 - Create new **components** and **page previews** without introducing new patterns accidentally
 - Keep these docs up to date when conventions change
@@ -56,11 +56,26 @@ When extracting tokens from Figma:
 
 ### MCP and tooling edge cases
 
-**`generate_figma_design` is remote MCP only**
-This tool is available only on the remote MCP (`https://mcp.figma.com/mcp`), not on the desktop MCP (`127.0.0.1:3845`). It works by capturing a live localhost page via browser script injection — it does not accept raw HTML. Requirements: remote MCP must be authenticated, `npm run dev` must be running, and the page must be served on localhost.
+**Two Figma MCP servers, automatic fallback**
+Both MCP servers expose the same read surface (`get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`, Code Connect). Skills resolve the server at run time:
 
-**Figma remote MCP authentication**
-If the remote MCP shows "Needs authentication", configure the `headers` field in `.mcp.json`. Use the Figma Desktop MCP (`http://127.0.0.1:3845/mcp`) as the primary — it is fully connected whenever Figma Desktop is open in Dev Mode. The remote MCP is a fallback for when the desktop app is not available.
+1. Try Desktop candidates (`user-figma`, `user-Figma Desktop`, `figma-desktop`) — preferred when Figma Desktop is open with Dev Mode on.
+2. Fall back to Remote candidates (`plugin-figma-figma`, `figma`) — uses OAuth, no local app needed.
+3. Fail only if **both** are unreachable.
+
+Differences to be aware of:
+- **Selection context** (no URL, uses the node currently selected in Figma Desktop) is Desktop-only. The extractify skills always pass an explicit URL, so Remote is fully viable for every read flow here.
+- **Write-back via `generate_figma_design` is Remote-only** — see below.
+
+**`generate_figma_design` is remote MCP only**
+Available only on `https://mcp.figma.com/mcp`, not the desktop MCP. It works by capturing a live localhost page via browser script injection — it does not accept raw HTML. Requirements: remote MCP must be authenticated, `npm run dev` must be running, and the page must be served on localhost.
+
+**Figma Remote MCP authentication**
+Remote uses OAuth — the IDE (Claude Code / Cursor) opens a browser prompt on first use. Do **not** add an `X-Figma-Token` header; that breaks the OAuth flow. The standard `.mcp.json` entry is enough:
+
+```json
+"figma": { "type": "http", "url": "https://mcp.figma.com/mcp" }
+```
 
 **Token discovery from a single-frame Figma file**
 If the Figma file has no formal design system page and all tokens are embedded in one frame, call `get_variable_defs` + `get_design_context` on the root frame node. Variable defs return named tokens (colors, spacing, typography). Design context returns the rendered code with all inline styles, from which remaining tokens can be extracted.

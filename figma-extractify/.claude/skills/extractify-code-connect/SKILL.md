@@ -46,7 +46,7 @@ figma.connect(MyComponent, 'https://www.figma.com/...', {
 - Component exists in `src/components/<Name>/index.tsx`
 - Component has passed compliance + visual review
 - Figma URL exists in `_docs/figma-paths.yaml` under `components.<name>`
-- Figma Desktop MCP connected
+- At least one Figma MCP reachable — Desktop (preferred) or Remote (fallback). Both expose the Code Connect tools.
 
 ## Recommended workflow
 

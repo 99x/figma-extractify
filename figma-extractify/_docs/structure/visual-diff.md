@@ -20,7 +20,7 @@ Quantified pixel-level comparison between Playwright screenshots and Figma scree
 ## How it works
 
 1. **Playwright captures** a screenshot of the preview page → PNG saved to `.screenshots/<component-name>-desktop.png`
-2. **Figma Desktop MCP** calls `get_screenshot` to fetch the design reference → **the response is an inline image in chat, not a file on disk**. The AI must explicitly write the raw PNG bytes to `.screenshots/<component-name>-figma.png` before proceeding.
+2. **Figma MCP** (Desktop or Remote, whichever the preflight resolved) calls `get_screenshot` to fetch the design reference → **the response is an inline image in chat, not a file on disk**. The AI must explicitly write the raw PNG bytes to `.screenshots/<component-name>-figma.png` before proceeding.
 3. **Visual diff script** (`scripts/visual-diff.js`) runs pixelmatch on both PNGs
 
 > ⚠️ **Common failure mode**: `get_screenshot` returns the Figma screenshot inline to the chat context. It does NOT automatically write a file. If you skip the explicit file-write step, `visual-diff.js` will exit with "Missing Figma screenshot" and the gate cannot pass. Always confirm `.screenshots/<component-name>-figma.png` exists on disk before running the diff script.
@@ -52,7 +52,7 @@ The visual diff script runs at **Step 5 (Evaluate)** of the Ralph Loop:
 1. BUILD    → Generate/update the component
 2. SERVE    → Ensure dev server running (npm run dev)
 3. CAPTURE  → Playwright screenshot → .screenshots/<component-name>-desktop.png
-4. COMPARE  → Figma Desktop MCP get_screenshot → .screenshots/<component-name>-figma.png
+4. COMPARE  → Figma MCP (Desktop or Remote) get_screenshot → .screenshots/<component-name>-figma.png
 5. EVALUATE → Run visual-diff.js to quantify differences
 6. REFINE   → If similarity < 95% or category fails → fix and loop back to step 3
 7. COMPLETE → If similarity ≥ 95% and all categories pass → proceed to output checklist
@@ -182,7 +182,7 @@ node scripts/visual-diff.js <component-name>-desktop
 npx playwright screenshot --browser=chromium --viewport-size=1440,900 --wait-for-timeout=2000 \
   http://localhost:3000/components/hero-banner .screenshots/hero-banner-desktop.png
 
-# 3. Get Figma reference (use Figma Desktop MCP get_screenshot tool)
+# 3. Get Figma reference (use the resolved Figma MCP — Desktop or Remote — get_screenshot tool)
 # → Saves to .screenshots/hero-banner-figma.png
 
 # 4. Run visual diff

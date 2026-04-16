@@ -129,7 +129,7 @@ In all other cases, prefer `<Image>` from `next/image` — it is simpler and mor
 
 ### Hashed filenames from `get_design_context`
 
-When using the Figma Desktop MCP `get_design_context` with `dirForAssetWrites`, SVGs are exported using content hashes as filenames (e.g. `0f95f2a3...svg`) — not semantic names. Before using exported icons you must:
+When using the Figma MCP `get_design_context` (Desktop or Remote) with `dirForAssetWrites`, SVGs are exported using content hashes as filenames (e.g. `0f95f2a3...svg`) — not semantic names. Before using exported icons you must:
 
 1. List all files in `.figma-assets/`
 2. Read each SVG to identify its purpose
@@ -139,7 +139,7 @@ Never reference hashed filenames in component code.
 
 ### `dirForAssetWrites` is required
 
-`get_design_context` on the Figma Desktop MCP **always requires** `dirForAssetWrites` pointing to `.figma-assets/` in the project root. Omitting it causes a "Path for asset writes required" error. The directory is created automatically by the tool.
+`get_design_context` on the Figma Desktop MCP **always requires** `dirForAssetWrites` pointing to `.figma-assets/` in the project root. Omitting it causes a "Path for asset writes required" error. The directory is created automatically by the tool. (Remote MCP may behave differently — if `get_design_context` errors with the same message when falling back to Remote, pass the same `dirForAssetWrites` parameter.)
 
 ```
 dirForAssetWrites: ".figma-assets/"

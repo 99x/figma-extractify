@@ -16,7 +16,7 @@ This project uses the **Ralph Loop pattern** — an iterative self-correction cy
 
 | Tool | Configuration | Purpose |
 |---|---|---|
-| **Figma Desktop MCP** | Connected via Claude | Source of truth for design specs and screenshots |
+| **Figma MCP** (Desktop or Remote) | Connected via Claude (preflight resolves the server — Desktop preferred, Remote fallback) | Source of truth for design specs and screenshots |
 | **Playwright CLI** | `npm install -D @playwright/test` + `npx playwright install chromium` | Takes screenshots of preview pages for comparison |
 | **Dev server** | `npm run dev` (port 3000) | Renders preview pages locally |
 
@@ -60,7 +60,7 @@ Read → .screenshots/<component-name>-desktop.png
 
 #### Step 4 — Compare (Figma)
 
-Use the Figma Desktop MCP to get the design reference:
+Use the resolved Figma MCP (Desktop if available, otherwise Remote) to get the design reference:
 
 ```
 get_design_context → { nodeId, fileKey } from the Figma URL

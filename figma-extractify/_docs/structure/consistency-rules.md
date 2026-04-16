@@ -107,7 +107,7 @@ Never guess the heading level or text style of a Figma text node based on its vi
 
 ### Required process
 
-1. **Use Figma Desktop MCP `get_variable_defs`** on the text node to extract:
+1. **Use the resolved Figma MCP `get_variable_defs`** (Desktop if available, Remote fallback) on the text node to extract:
    - `font-size`
    - `line-height`
    - `font-family`

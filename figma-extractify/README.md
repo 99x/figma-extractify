@@ -118,7 +118,9 @@ Run these in **Claude Code** or **your preferred A.I.**:
 ### First-time workflow
 
 ```
-1. Open Figma Desktop in Dev Mode (Shift+D)
+1. Connect to Figma — EITHER of these works:
+     • Open Figma Desktop in Dev Mode (Shift+D)     ← preferred, runs at 127.0.0.1:3845
+     • Let the IDE open the Remote MCP OAuth prompt ← fallback, https://mcp.figma.com/mcp
 2. Add your Figma URLs to _docs/figma-paths.yaml
    (or import example-file/example.fig to try with a sample file)
 3. npm run dev
@@ -179,20 +181,28 @@ Each URL maps to a page or frame in your file. Leave a field as `~` to skip it o
 ## Prerequisites
 
 - **Node.js** 18.17+
-- **Figma Desktop** open in Dev Mode (required for the MCP connection)
+- **At least one Figma MCP server reachable** — you need **either**:
+  - **Figma Desktop** open in Dev Mode (preferred, runs locally at `http://127.0.0.1:3845/mcp`), **or**
+  - **Figma Remote MCP** authenticated via OAuth in your IDE (`https://mcp.figma.com/mcp`) — used automatically as a fallback when Desktop isn't available.
 - **Claude Code**, **Cursor**, or another AI IDE that supports MCP
 
-### About Figma Dev Mode
+### About the two Figma MCP servers
 
-Dev Mode is what powers the Figma Desktop MCP — it runs a local server at `http://127.0.0.1:3845/mcp` that gives Claude direct access to your design file.
+Figma Extractify works against either server. Both expose the same read tools (`get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`, Code Connect). Every skill resolves the server at run time — Desktop first, Remote as fallback — and fails preflight only if **both** are down.
 
-Dev Mode requires a **paid Figma plan** (Professional, Organization, or Enterprise). The free Starter plan does not include Dev Mode. Education plans include Dev Mode for free.
+**Figma Desktop MCP** (preferred)
+- Runs locally at `http://127.0.0.1:3845/mcp` whenever Figma Desktop is open with Dev Mode on.
+- Dev Mode requires a **paid Figma plan** (Professional, Organization, Enterprise) or a free Education plan.
+- To enable: open any file in Figma Desktop and press **Shift+D** (or click the `</>` toggle in the bottom toolbar).
+- More info: [Figma Dev Mode plans](https://help.figma.com/hc/en-us/articles/15023124644247)
 
-To enable it: open any Figma file in the desktop app and press **Shift+D** (or click the `</>` toggle in the bottom toolbar).
+**Figma Remote MCP** (fallback)
+- Served at `https://mcp.figma.com/mcp`, authenticated via **OAuth** — your IDE opens a browser prompt on first use.
+- Works without the desktop app, which makes it the right option for headless setups or when Dev Mode is unavailable.
+- Also required for write-back flows like `/extractify-discover` — `generate_figma_design` is Remote-only.
+- Do **not** add an `X-Figma-Token` header to `.mcp.json`; it breaks the OAuth flow.
 
-More info: [Figma Dev Mode plans](https://help.figma.com/hc/en-us/articles/15023124644247)
-
-Run `/extractify-preflight` before your first `/extractify-setup` to verify everything is ready.
+Both are already wired up in `.mcp.json` after install. Run `/extractify-preflight` to verify which one is active before your first `/extractify-setup`.
 
 ---
 

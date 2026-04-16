@@ -339,7 +339,7 @@ Read `_docs/structure/visual-review.md` for the full protocol.
 
 | Tool | Purpose |
 |---|---|
-| **Figma Desktop MCP** | Source of truth — extract design context, screenshots, and specs (Figma Desktop must be open in Dev Mode) |
+| **Figma MCP** (Desktop or Remote) | Source of truth — extract design context, screenshots, and specs. Desktop is preferred (runs at `127.0.0.1:3845` when Figma Desktop is open in Dev Mode); Remote (`mcp.figma.com/mcp`, OAuth) is the automatic fallback when Desktop is unavailable. |
 | **Playwright CLI** | Render preview pages and capture screenshots for comparison |
 
 ### The loop (execute for every UI task)
@@ -348,7 +348,7 @@ Read `_docs/structure/visual-review.md` for the full protocol.
 1. BUILD    → Generate/update the component following all project rules
 2. SERVE    → Ensure dev server is running (npm run dev)
 3. CAPTURE  → Use Playwright CLI to screenshot the preview page
-4. COMPARE  → Use Figma Desktop MCP to get the design screenshot/context for the same component
+4. COMPARE  → Use the resolved Figma MCP (Desktop or Remote) to get the design screenshot/context for the same component
 5. EVALUATE → Compare both images — check spacing, colors, typography, alignment, sizing
 6. REFINE   → If differences found → fix the code → go back to step 3
 7. COMPLETE → If visual match is satisfactory → proceed to output checklist

@@ -82,7 +82,8 @@ bash figma-extractify/install.sh
 
 # 6. Add your Figma URLs and start extracting
 # → edit _docs/figma-paths.yaml (or use example-file/example.fig to try it out)
-# → open Figma Desktop in Dev Mode
+# → connect to Figma — either open Figma Desktop in Dev Mode (preferred)
+#   OR let the IDE open the Remote MCP OAuth prompt (fallback, no desktop app needed)
 # → npm run dev
 # → /extractify-preflight
 # → /extractify-setup

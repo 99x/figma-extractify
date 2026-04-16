@@ -28,7 +28,7 @@ Read these files (they govern the full workflow):
 ## Requirements
 
 - Figma URLs must be set in `_docs/figma-paths.yaml` before running
-- Figma Desktop open in Dev Mode (for the MCP connection)
+- **At least one Figma MCP server reachable** — Desktop (`127.0.0.1:3845/mcp`, via Figma Desktop + Dev Mode) is preferred; Remote (`mcp.figma.com/mcp`, via OAuth) is the automatic fallback. Setup fails only if both are down.
 - `npm run dev` running in a separate terminal
 
 ## Key rules (enforced during extraction)

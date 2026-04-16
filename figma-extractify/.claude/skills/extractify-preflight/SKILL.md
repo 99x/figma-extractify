@@ -17,7 +17,9 @@ Read:
 | Check | Required? | What fails if missing | Auto-installable? |
 |---|---|---|---|
 | Node.js v18.17+ | ✅ Required | Nothing works | No — user must install |
-| Figma Desktop MCP | ✅ Required | Cannot extract from Figma | No — open Figma Desktop |
+| Figma MCP (Desktop **or** Remote) | ✅ Required | Cannot extract from Figma — blocks only if **both** are down | No — open Figma Desktop or approve Remote OAuth |
+| Figma Desktop MCP (preferred) | ⚠️ Optional | Falls back to Remote automatically | No — open Figma Desktop |
+| Figma Remote MCP (fallback) | ⚠️ Optional | No fallback if Desktop is down | No — requires Remote OAuth |
 | Playwright + Chromium | ⚠️ Optional | Visual review loop won't run | ✅ Yes |
 | Node dependencies (`node_modules/`) | ✅ Required | Dev server won't start | ✅ Yes (`npm install`) |
 | `.screenshots/` directory | ⚠️ Optional | Auto-created if missing | ✅ Yes (auto) |
@@ -47,8 +49,9 @@ If the user says **yes**, all installable items are set up automatically and the
 Pre-flight check
 ────────────────────────────────────
   ✅  Node.js                   v20.x.x
+  ✅  Figma MCP                 Desktop (primary)   ← or "Remote (fallback)"
   ✅  Figma Desktop MCP         connected (Dev Mode active)
-  ✅  Figma Remote MCP          authenticated  ← optional, only for write-back
+  ✅  Figma Remote MCP          authenticated      ← optional, enables write-back
   ✅  Playwright + Chromium     ready (v1.x.x)
   ✅  Node dependencies         installed
   ✅  .screenshots/             ready
@@ -63,6 +66,6 @@ All checks passed. Ready to run /extractify-setup.
 
 Stop and show fix instructions for any ❌ before proceeding. ⚠️ items are non-blocking warnings. ✅ N/A items are sandbox-only skips — the bash script detected a Cowork environment and those checks don't apply.
 
-**Blocking in both environments:** Figma Desktop MCP, missing node_modules, missing figma-paths.yaml.
+**Blocking in both environments:** Figma MCP (only if **both** Desktop **and** Remote are down), missing node_modules, missing figma-paths.yaml.
 **Blocking only locally (Claude Code):** Node.js version, Playwright/Chromium install failures.
-**Never blocking:** Node/Playwright/Chromium when reported as sandbox N/A.
+**Never blocking on its own:** Desktop-only failure when Remote works (fallback), Remote-only failure when Desktop works, Node/Playwright/Chromium when reported as sandbox N/A.
