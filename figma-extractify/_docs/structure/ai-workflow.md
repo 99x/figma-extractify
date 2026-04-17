@@ -71,11 +71,25 @@ Differences to be aware of:
 Available only on `https://mcp.figma.com/mcp`, not the desktop MCP. It works by capturing a live localhost page via browser script injection — it does not accept raw HTML. Requirements: remote MCP must be authenticated, `npm run dev` must be running, and the page must be served on localhost.
 
 **Figma Remote MCP authentication**
-Remote uses OAuth — the IDE (Claude Code / Cursor) opens a browser prompt on first use. Do **not** add an `X-Figma-Token` header; that breaks the OAuth flow. The standard `.mcp.json` entry is enough:
+Remote uses OAuth 2.0 — no PAT, no API key. The standard `.mcp.json` entry is all that's needed; do **not** add an `X-Figma-Token` or any `headers` block (it breaks the OAuth handshake):
 
 ```json
 "figma": { "type": "http", "url": "https://mcp.figma.com/mcp" }
 ```
+
+To complete the flow:
+
+- **Claude Code** — run `/mcp` in the chat → select `figma` → **Authenticate**. Browser opens, log in, approve. Fully restart Claude Code so live MCP sessions pick up the new token.
+- **Cursor** — **MCP Settings** (`Cmd/Ctrl+Shift+P` → "Cursor: Open MCP Settings") → `figma` → **Authenticate** → restart Cursor.
+- Or just call any Figma tool once — the IDE prompts OAuth automatically.
+
+Failure modes to distinguish (skills and `/extractify-preflight` classify them):
+
+- **Tool not found** → server not registered in the IDE → check `.mcp.json` and restart the IDE.
+- **401 / unauthorized** → registered but OAuth not completed → run the flow above.
+- **Connection error** → network/proxy/firewall blocking `*.figma.com`.
+
+For the full guided walkthrough (including common pitfalls: popup blockers, wrong Figma account, stale token after re-auth), run `/extractify-preflight` — Step 3a has the IDE-specific instructions.
 
 **Token discovery from a single-frame Figma file**
 If the Figma file has no formal design system page and all tokens are embedded in one frame, call `get_variable_defs` + `get_design_context` on the root frame node. Variable defs return named tokens (colors, spacing, typography). Design context returns the rendered code with all inline styles, from which remaining tokens can be extracted.

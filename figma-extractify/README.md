@@ -197,12 +197,18 @@ Figma Extractify works against either server. Both expose the same read tools (`
 - More info: [Figma Dev Mode plans](https://help.figma.com/hc/en-us/articles/15023124644247)
 
 **Figma Remote MCP** (fallback)
-- Served at `https://mcp.figma.com/mcp`, authenticated via **OAuth** — your IDE opens a browser prompt on first use.
+- Served at `https://mcp.figma.com/mcp`, authenticated via **OAuth 2.0** — no Personal Access Token, no API key.
 - Works without the desktop app, which makes it the right option for headless setups or when Dev Mode is unavailable.
 - Also required for write-back flows like `/extractify-discover` — `generate_figma_design` is Remote-only.
 - Do **not** add an `X-Figma-Token` header to `.mcp.json`; it breaks the OAuth flow.
 
-Both are already wired up in `.mcp.json` after install. Run `/extractify-preflight` to verify which one is active before your first `/extractify-setup`.
+**How to complete the Remote OAuth flow** (one-time per IDE install):
+
+- **Claude Code** — in the chat, run `/mcp` → select `figma` → **Authenticate**. A browser opens, log into Figma and approve. Fully restart Claude Code so the token is picked up by live sessions.
+- **Cursor** — open **MCP Settings** (`Cmd/Ctrl+Shift+P` → "Cursor: Open MCP Settings") → find the `figma` entry → click **Authenticate**. Restart Cursor.
+- Alternative: trigger any Figma tool call — the IDE prompts OAuth automatically on first use.
+
+Both servers are already wired up in `.mcp.json` after install. Run `/extractify-preflight` to verify which one is active before your first `/extractify-setup` — it classifies Remote failures (not registered / 401 / network) and walks you through the matching fix.
 
 ---
 
