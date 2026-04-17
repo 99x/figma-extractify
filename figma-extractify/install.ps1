@@ -298,13 +298,12 @@ if ($APP_ROOT) {
         ok ".claude\settings.json already exists — skipped"
     }
 
-    $settingsLocalSrc = Join-Path $PROJECT_DIR ".claude" "settings.local.json"
-    $settingsLocalDest = Join-Path $APP_ROOT ".claude" "settings.local.json"
-    if ((Test-Path $settingsLocalSrc) -and -not (Test-Path $settingsLocalDest)) {
-        New-Item -ItemType Directory -Force -Path (Join-Path $APP_ROOT ".claude") | Out-Null
-        Copy-Item $settingsLocalSrc -Destination $settingsLocalDest
-        ok "Installed .claude\settings.local.json"
-    }
+    # Note: settings.local.json is intentionally NOT copied. It's a per-machine
+    # file that accumulates permission grants with absolute paths from the user
+    # who created it. Each installation must generate its own — Claude Code does
+    # this automatically as the user approves tools. A reference copy of useful
+    # MCP permissions lives at figma-extractify\.claude\settings.local.json.example
+    # if you want to seed one manually.
 
     # ── 6d. scripts/ (visual-diff + a11y-audit) ─────────────────────────────
     $scriptsSrc = Join-Path $PROJECT_DIR "scripts"

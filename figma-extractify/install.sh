@@ -277,11 +277,12 @@ if [ -n "$APP_ROOT" ]; then
     ok ".claude/settings.json already exists — skipped"
   fi
 
-  if [ -f "$PROJECT_DIR/.claude/settings.local.json" ] && [ ! -f "$APP_ROOT/.claude/settings.local.json" ]; then
-    mkdir -p "$APP_ROOT/.claude"
-    cp "$PROJECT_DIR/.claude/settings.local.json" "$APP_ROOT/.claude/settings.local.json"
-    ok "Installed .claude/settings.local.json"
-  fi
+  # Note: settings.local.json is intentionally NOT copied. It's a per-machine
+  # file that accumulates permission grants with absolute paths from the user
+  # who created it. Each installation must generate its own — Claude Code does
+  # this automatically as the user approves tools. A reference copy of useful
+  # MCP permissions lives at figma-extractify/.claude/settings.local.json.example
+  # if you want to seed one manually.
 
   # ── 6d. scripts/ (visual-diff + a11y-audit) ────────────────────────────────
   if [ -d "$PROJECT_DIR/scripts" ]; then
