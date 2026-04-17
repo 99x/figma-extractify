@@ -27,11 +27,28 @@ if (Test-Path "package.json") {
     $APP_ROOT = (Resolve-Path "boilerplate").Path
 }
 
+# ── Install vs upgrade detection ─────────────────────────────────────────────
+# If /extractify-setup already exists in the target, treat this run as an
+# upgrade: shipped files (commands, skill, hook, scripts, _docs contracts, IDE
+# rules) are overwritten; user-owned files (figma-paths.yaml, learnings.md,
+# CLAUDE.md, .mcp.json, .claude\settings.json) are preserved.
+$MODE = "install"
+if ($APP_ROOT -and (Test-Path (Join-Path $APP_ROOT ".claude" "commands" "extractify-setup.md"))) {
+    $MODE = "upgrade"
+}
+$UPGRADED_COUNT = 0
+$PRESERVED_COUNT = 0
+
 # ── Header ────────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "╔══════════════════════════════════════════════╗" -ForegroundColor White
 Write-Host "║        Figma Extractify — Installer          ║" -ForegroundColor White
 Write-Host "╚══════════════════════════════════════════════╝" -ForegroundColor White
+if ($MODE -eq "upgrade") {
+    Write-Host ""
+    Write-Host "  Detected existing install - running in upgrade mode." -ForegroundColor Yellow
+    Write-Host "  Shipped files will be overwritten; user-owned files preserved."
+}
 Write-Host ""
 
 # ── 1. Check Node.js ──────────────────────────────────────────────────────────
@@ -75,11 +92,26 @@ if ($APP_ROOT) {
 }
 
 # ── 3. Optional QA tools ──────────────────────────────────────────────────────
-Write-Host ""
-Write-Host "  Optional QA tools power the visual diff and accessibility audit:" -ForegroundColor White
-Write-Host "  pixelmatch · pngjs · @axe-core/playwright · Playwright Chromium" -ForegroundColor Yellow
-Write-Host ""
-$INSTALL_QA = Read-Host "  Install QA tools? [y/N]"
+$HAS_QA = $false
+if ($APP_ROOT) {
+    $pkgJson = Join-Path $APP_ROOT "package.json"
+    if (Test-Path $pkgJson) {
+        if ((Get-Content $pkgJson -Raw) -match '"@axe-core/playwright"') {
+            $HAS_QA = $true
+        }
+    }
+}
+
+if ($HAS_QA) {
+    ok "QA tools already installed - skipping prompt"
+    $INSTALL_QA = "n"
+} else {
+    Write-Host ""
+    Write-Host "  Optional QA tools power the visual diff and accessibility audit:" -ForegroundColor White
+    Write-Host "  pixelmatch · pngjs · @axe-core/playwright · Playwright Chromium" -ForegroundColor Yellow
+    Write-Host ""
+    $INSTALL_QA = Read-Host "  Install QA tools? [y/N]"
+}
 if ($INSTALL_QA -match '^[Yy]$') {
     step "Installing QA tools..."
     if ($APP_ROOT) {
@@ -129,6 +161,7 @@ if (Test-Path $COMMANDS_SRC) {
             Copy-Item $_.FullName -Destination $LOCAL_COMMANDS_DIR -Force
             ok "Installed command: $($_.Name) → .claude\commands\$($_.Name)"
             $COMMANDS_FOUND = $true
+            $script:UPGRADED_COUNT++
         }
     }
 }
@@ -152,9 +185,16 @@ $SKILLS_FOUND = $false
 foreach ($SRC in $SKILL_SOURCES) {
     $figmaUseSrc = Join-Path $SRC "figma-use"
     if (Test-Path $figmaUseSrc) {
+        # Clean-replace so removed-upstream files don't linger in the user's copy.
+        # figma-use\ is fully owned by figma-extractify - no user files to preserve.
+        $figmaUseDest = Join-Path $LOCAL_SKILLS_DIR "figma-use"
+        if (Test-Path $figmaUseDest) {
+            Remove-Item $figmaUseDest -Recurse -Force
+        }
         Copy-Item $figmaUseSrc -Destination $LOCAL_SKILLS_DIR -Recurse -Force
         ok "Installed skill: figma-use → .claude\skills\figma-use"
         $SKILLS_FOUND = $true
+        $UPGRADED_COUNT++
         break
     }
 }
@@ -215,6 +255,7 @@ if (-not (Test-Path $HOOK_SRC)) {
     New-Item -ItemType Directory -Force -Path $HOOK_DEST_DIR | Out-Null
     Copy-Item $HOOK_SRC -Destination (Join-Path $HOOK_DEST_DIR "ralph-stop.sh") -Force
     ok "Installed Ralph stop hook: $HOOK_DEST_DIR\ralph-stop.sh"
+    $UPGRADED_COUNT++
 }
 
 if (Get-Command jq -ErrorAction SilentlyContinue) {
@@ -231,29 +272,35 @@ if (Get-Command jq -ErrorAction SilentlyContinue) {
 step "Installing documentation contracts..."
 $DOCS_SRC = Join-Path $PROJECT_DIR "_docs"
 
+# Files under _docs\ that are user-owned and must never be overwritten on
+# upgrade. Everything else in _docs\ is shipped by figma-extractify and gets
+# force-updated so contract changes propagate to existing installs.
+$DOCS_PRESERVE = @("figma-paths.yaml", "learnings.md")
+
 if ((Test-Path $DOCS_SRC) -and $APP_ROOT) {
     $DOCS_DEST = Join-Path $APP_ROOT "_docs"
-    if (Test-Path $DOCS_DEST) {
-        # Merge without overwriting — don't clobber user edits
-        # Copy each item only if it doesn't already exist at the destination
-        Get-ChildItem -Path $DOCS_SRC -Recurse | ForEach-Object {
-            $relativePath = $_.FullName.Substring($DOCS_SRC.Length)
-            $destPath = Join-Path $DOCS_DEST $relativePath
-            if ($_.PSIsContainer) {
-                if (-not (Test-Path $destPath)) {
-                    New-Item -ItemType Directory -Force -Path $destPath | Out-Null
-                }
-            } else {
-                if (-not (Test-Path $destPath)) {
-                    Copy-Item $_.FullName -Destination $destPath -Force
-                }
+    New-Item -ItemType Directory -Force -Path $DOCS_DEST | Out-Null
+    Get-ChildItem -Path $DOCS_SRC -Recurse -File | ForEach-Object {
+        $rel = $_.FullName.Substring($DOCS_SRC.Length).TrimStart('\', '/')
+        $destFile = Join-Path $DOCS_DEST $rel
+        $destDir  = Split-Path $destFile -Parent
+        New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+        $relNormalized = $rel -replace '\\', '/'
+        $preserved = $false
+        foreach ($p in $DOCS_PRESERVE) {
+            if ($relNormalized -eq $p -and (Test-Path $destFile)) {
+                $preserved = $true
+                break
             }
         }
-        ok "Merged _docs/ → $DOCS_DEST (existing files preserved)"
-    } else {
-        Copy-Item $DOCS_SRC -Destination $DOCS_DEST -Recurse
-        ok "Installed _docs/ → $DOCS_DEST"
+        if ($preserved) {
+            $script:PRESERVED_COUNT++
+        } else {
+            Copy-Item $_.FullName -Destination $destFile -Force
+            $script:UPGRADED_COUNT++
+        }
     }
+    ok "Installed _docs/ → $DOCS_DEST (figma-paths.yaml and learnings.md preserved if present)"
 } elseif ((Test-Path $DOCS_SRC) -and -not $APP_ROOT) {
     warn "_docs/ found but no app root detected — copy _docs/ to your project manually"
 } else {
@@ -267,27 +314,30 @@ if ((Test-Path $DOCS_SRC) -and $APP_ROOT) {
 step "Installing project config files..."
 
 if ($APP_ROOT) {
-    # ── 6a. CLAUDE.md (project-level agent config) ───────────────────────────
+    # ── 6a. CLAUDE.md (project-level agent config - user-customized) ─────────
+    # Preserve on upgrade; teams edit CLAUDE.md heavily for project specifics.
     $claudeMdSrc = Join-Path $PROJECT_DIR "CLAUDE.md"
     $claudeMdDest = Join-Path $APP_ROOT "CLAUDE.md"
     if ((Test-Path $claudeMdSrc) -and -not (Test-Path $claudeMdDest)) {
         Copy-Item $claudeMdSrc -Destination $claudeMdDest
         ok "Installed CLAUDE.md"
     } elseif (Test-Path $claudeMdSrc) {
-        ok "CLAUDE.md already exists — skipped"
+        ok "CLAUDE.md already exists - preserved"
+        $PRESERVED_COUNT++
     }
 
-    # ── 6b. .mcp.json (Figma MCP server definitions) ────────────────────────
+    # ── 6b. .mcp.json (Figma MCP server definitions - may contain others) ───
     $mcpSrc = Join-Path $PROJECT_DIR ".mcp.json"
     $mcpDest = Join-Path $APP_ROOT ".mcp.json"
     if ((Test-Path $mcpSrc) -and -not (Test-Path $mcpDest)) {
         Copy-Item $mcpSrc -Destination $mcpDest
         ok "Installed .mcp.json (Figma MCP servers)"
     } elseif ((Test-Path $mcpSrc) -and (Test-Path $mcpDest)) {
-        warn ".mcp.json already exists — review $mcpSrc and merge manually if needed"
+        warn ".mcp.json already exists - preserved (review $mcpSrc and merge manually if needed)"
+        $PRESERVED_COUNT++
     }
 
-    # ── 6c. .claude/settings.json (permissions + hooks) ──────────────────────
+    # ── 6c. .claude\settings.json (permissions - may contain other tools) ───
     $settingsSrc = Join-Path $PROJECT_DIR ".claude" "settings.json"
     $settingsDest = Join-Path $APP_ROOT ".claude" "settings.json"
     if ((Test-Path $settingsSrc) -and -not (Test-Path $settingsDest)) {
@@ -295,58 +345,62 @@ if ($APP_ROOT) {
         Copy-Item $settingsSrc -Destination $settingsDest
         ok "Installed .claude\settings.json"
     } elseif (Test-Path $settingsSrc) {
-        ok ".claude\settings.json already exists — skipped"
+        ok ".claude\settings.json already exists - preserved"
+        $PRESERVED_COUNT++
     }
 
     # Note: settings.local.json is intentionally NOT copied. It's a per-machine
     # file that accumulates permission grants with absolute paths from the user
-    # who created it. Each installation must generate its own — Claude Code does
+    # who created it. Each installation must generate its own - Claude Code does
     # this automatically as the user approves tools. A reference copy of useful
     # MCP permissions lives at figma-extractify\.claude\settings.local.json.example
     # if you want to seed one manually.
 
-    # ── 6d. scripts/ (visual-diff + a11y-audit) ─────────────────────────────
+    # ── 6d. scripts\ (visual-diff + a11y-audit - shipped, overwritten) ──────
     $scriptsSrc = Join-Path $PROJECT_DIR "scripts"
     if (Test-Path $scriptsSrc) {
         $scriptsDest = Join-Path $APP_ROOT "scripts"
         New-Item -ItemType Directory -Force -Path $scriptsDest | Out-Null
         Get-ChildItem -Path $scriptsSrc -File | ForEach-Object {
             $destFile = Join-Path $scriptsDest $_.Name
-            if (-not (Test-Path $destFile)) {
-                Copy-Item $_.FullName -Destination $destFile
-                ok "Installed scripts\$($_.Name)"
-            } else {
-                ok "scripts\$($_.Name) already exists — skipped"
-            }
+            Copy-Item $_.FullName -Destination $destFile -Force
+            ok "Installed scripts\$($_.Name)"
+            $script:UPGRADED_COUNT++
         }
     }
 
-    # ── 6e. IDE rules (Cursor + Windsurf) ────────────────────────────────────
+    # ── 6e. IDE rules (Cursor + Windsurf + Copilot - shipped, overwritten) ──
     $cursorSrc = Join-Path $PROJECT_DIR ".cursor" "rules"
     if (Test-Path $cursorSrc) {
         $cursorDest = Join-Path $APP_ROOT ".cursor" "rules"
         New-Item -ItemType Directory -Force -Path $cursorDest | Out-Null
         Get-ChildItem -Path $cursorSrc -File | ForEach-Object {
             $destFile = Join-Path $cursorDest $_.Name
-            if (-not (Test-Path $destFile)) {
-                Copy-Item $_.FullName -Destination $destFile
-                ok "Installed .cursor\rules\$($_.Name)"
-            } else {
-                ok ".cursor\rules\$($_.Name) already exists — skipped"
-            }
+            Copy-Item $_.FullName -Destination $destFile -Force
+            ok "Installed .cursor\rules\$($_.Name)"
+            $script:UPGRADED_COUNT++
         }
     }
 
     $windsurfSrc = Join-Path $PROJECT_DIR ".windsurfrules"
     $windsurfDest = Join-Path $APP_ROOT ".windsurfrules"
-    if ((Test-Path $windsurfSrc) -and -not (Test-Path $windsurfDest)) {
-        Copy-Item $windsurfSrc -Destination $windsurfDest
+    if (Test-Path $windsurfSrc) {
+        Copy-Item $windsurfSrc -Destination $windsurfDest -Force
         ok "Installed .windsurfrules"
-    } elseif (Test-Path $windsurfSrc) {
-        ok ".windsurfrules already exists — skipped"
+        $UPGRADED_COUNT++
+    }
+
+    # ── 6f. GitHub Copilot instructions (shipped, overwritten) ──────────────
+    $copilotSrc = Join-Path $PROJECT_DIR ".github" "copilot-instructions.md"
+    if (Test-Path $copilotSrc) {
+        $copilotDestDir = Join-Path $APP_ROOT ".github"
+        New-Item -ItemType Directory -Force -Path $copilotDestDir | Out-Null
+        Copy-Item $copilotSrc -Destination (Join-Path $copilotDestDir "copilot-instructions.md") -Force
+        ok "Installed .github\copilot-instructions.md"
+        $UPGRADED_COUNT++
     }
 } else {
-    warn "No app root detected — copy config files manually (CLAUDE.md, .mcp.json, scripts\, .cursor\rules\)"
+    warn "No app root detected - copy config files manually (CLAUDE.md, .mcp.json, scripts\, .cursor\rules\, .github\copilot-instructions.md)"
 }
 
 # ── 7. Check Figma paths file ─────────────────────────────────────────────────
@@ -397,8 +451,16 @@ if ($DELETE_FOLDER -match '^[Yy]$') {
 
 # ── 9. Done ───────────────────────────────────────────────────────────────────
 Write-Host ""
+if ($MODE -eq "upgrade") {
+    ok "Upgrade summary: $UPGRADED_COUNT shipped files updated, $PRESERVED_COUNT user-owned files preserved"
+    Write-Host ""
+}
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
-Write-Host "  Setup complete. Here's what to do next:" -ForegroundColor Green
+if ($MODE -eq "upgrade") {
+    Write-Host "  Upgrade complete. Here's what to do next:" -ForegroundColor Green
+} else {
+    Write-Host "  Setup complete. Here's what to do next:" -ForegroundColor Green
+}
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
 Write-Host ""
 Write-Host "  1. Add your Figma URLs → " -NoNewline; Write-Host "_docs\figma-paths.yaml" -ForegroundColor Yellow

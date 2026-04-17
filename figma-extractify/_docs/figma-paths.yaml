@@ -35,7 +35,26 @@ setup:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Component Figma links
-# Add one line per component: <kebab-case-name>: <figma url>
+#
+# Two formats are supported:
+#
+#   1) Simple component — one line:
+#        <kebab-case-name>: <figma url>
+#
+#   2) Parent with children — nested object:
+#        <parent-name>:
+#          figma: <parent frame url>
+#          children:
+#            <child-name>:
+#              figma: <child component url>
+#            <another-child>:
+#              figma: <child component url>
+#
+# Use the parent/child format when a section (e.g. `news-section`) is composed
+# of smaller reusable components (e.g. `news-block`). /extractify-new-component
+# builds children first, then assembles the parent — children can nest
+# recursively if needed. Already-existing child components are imported, not
+# rebuilt.
 #
 # Usage:
 #   /extractify-new-component hero          → uses the URL defined below
@@ -44,10 +63,12 @@ setup:
 # ─────────────────────────────────────────────────────────────────────────────
 
 components:
+  # Simple component
   # hero: https://www.figma.com/design/ABC123/Project?node-id=1-2
   # breadcrumbs: ~
   # list-links: ~
 
+  # Parent with children — built bottom-up (children first, then parent)
   news-section:
     figma: ~
     children:

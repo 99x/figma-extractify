@@ -1,12 +1,29 @@
 # Figma MCP setup
 
-**Single source of truth for connecting Figma Extractify to Figma.** All skills and other docs link here — do not re-explain this material elsewhere.
+**Single source of truth for connecting Figma Extractify to Figma.** All `/extractify-*` commands and other docs link here — do not re-explain this material elsewhere.
+
+---
+
+## Which server should I use?
+
+Short answer: you don't have to choose — both are wired up in `.mcp.json`, and `/extractify-*` commands automatically prefer Desktop when reachable and fall back to Remote when it isn't.
+
+In practice:
+
+- **Paid Figma plan (Professional / Organization / Enterprise / Education)** → use **Desktop MCP**. Open Figma Desktop, press **Shift+D** to toggle Dev Mode, and you're done. No login prompts.
+- **Free plan — no Dev Mode** → use **Remote MCP** with OAuth. Sign in once through the browser prompt and you're set. Every `/extractify-*` command works identically over Remote because they always pass Figma URLs.
+- **Both available** → Desktop wins automatically. You don't lose anything; Remote stays as a safety net.
+- **Neither available** → preflight fails. Enable one.
+
+The only thing Remote can't do is read your *current Figma selection without a URL* — but no `/extractify-*` command does that anyway, so it's a non-issue.
+
+The only thing Desktop can't do is `generate_figma_design` (write-back) — used exclusively by `/extractify-discover` to push a design-system summary back into Figma. If you use `/extractify-discover`, enable Remote.
 
 ---
 
 ## Two servers, one API
 
-Every `/extractify-*` skill reads from Figma through an MCP server. Two are supported, both already wired up in `.mcp.json` after `install.sh`. They expose the same read surface (`get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`, Code Connect).
+Every `/extractify-*` command reads from Figma through an MCP server. Two are supported, both already wired up in `.mcp.json` after `install.sh`. They expose the same read surface (`get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`, Code Connect).
 
 | | **Figma Desktop MCP** | **Figma Remote MCP** |
 |---|---|---|
@@ -16,10 +33,10 @@ Every `/extractify-*` skill reads from Figma through an MCP server. Two are supp
 | Figma plan | Dev Mode needs a **paid plan** (Professional, Organization, Enterprise) or free Education | Works on any plan that can open the file |
 | Read tokens / context / screenshots | ✅ | ✅ |
 | Code Connect | ✅ | ✅ |
-| Read current Figma selection (no URL) | ✅ | ❌ (URL required — skills always pass URLs, so not a blocker) |
+| Read current Figma selection (no URL) | ✅ | ❌ (URL required — `/extractify-*` commands always pass URLs, so not a blocker) |
 | `generate_figma_design` write-back | ❌ | ✅ (used by `/extractify-discover` only) |
 
-**Preference order**: Desktop when available → Remote as automatic fallback. Skills fail only if **both** are unreachable.
+**Preference order**: Desktop when available → Remote as automatic fallback. Commands fail only if **both** are unreachable.
 
 ---
 
@@ -88,7 +105,7 @@ The installer drops this at the project root. Do not edit unless you know what y
 
 ## Troubleshooting
 
-Skills (especially `/extractify-preflight`) classify Remote failures into three buckets — use the classification to pick a fix:
+`/extractify-preflight` classifies Remote failures into three buckets — use the classification to pick a fix:
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -105,12 +122,12 @@ If stuck, run `/extractify-preflight` — it classifies the failure and prints t
 
 ---
 
-## How skills resolve the server (internal reference)
+## How `/extractify-*` commands resolve the server (canonical rule)
 
-Every skill follows this resolution at runtime. No other doc needs to repeat it.
+Every command follows this resolution at runtime. **This is the canonical candidate list — if IDs change, update this file first, then the command files that probe them.**
 
 1. Try Desktop candidates in order: `user-figma`, `user-Figma Desktop`, `figma-desktop`. Call `get_metadata` on the first one that exists. Tool responds → use Desktop.
 2. If Desktop unavailable, try Remote candidates: `plugin-figma-figma`, `figma`. Tool responds → use Remote.
-3. Both fail → skill stops with the preflight failure block.
+3. Both fail → command stops with the preflight failure block.
 
-Skills pick whichever server works for all read tools (`get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`, Code Connect). The `generate_figma_design` write-back is Remote-only regardless of the resolution.
+Commands pick whichever server works for all read tools (`get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`, Code Connect). The `generate_figma_design` write-back is Remote-only regardless of the resolution.

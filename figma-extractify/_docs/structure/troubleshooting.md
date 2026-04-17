@@ -118,6 +118,28 @@ By design — the uninstaller removes `.claude/commands/`, `.claude/skills/figma
 
 ---
 
+## Windows notes
+
+**Line endings (CRLF vs LF).** If `install.sh` or `uninstall.sh` fail with `$'\r': command not found` or similar garbled-line errors, your Git config converted LF → CRLF on checkout. Fix: `git config --global core.autocrlf input` and re-clone, OR run `dos2unix install.sh uninstall.sh` before executing. Only affects users running the Bash scripts under Git Bash or WSL — `install.ps1` and `install.bat` are immune.
+
+**Which shell to use.** Three options, in order of preference:
+
+1. **PowerShell** — `powershell -ExecutionPolicy Bypass -File install.ps1`. Recommended: zero line-ending risk, native Windows.
+2. **Double-click `install.bat`** — thin wrapper around `install.ps1`, no shell knowledge needed.
+3. **Git Bash / WSL** — `bash install.sh`. Works, but watch for the line-ending issue above.
+
+**PowerShell execution policy.** If `install.ps1` errors with `cannot be loaded because running scripts is disabled on this system`, bypass for that one run: `powershell -ExecutionPolicy Bypass -File install.ps1`. Do not change the machine-wide policy — per-run bypass is the safe pattern.
+
+**`jq` not preinstalled.** The Ralph Loop stop hook requires `jq`. On Windows, install via `winget install jqlang.jq` (Windows 11 and recent Windows 10), or download from [jqlang.github.io/jq](https://jqlang.github.io/jq/download/) and add to PATH. `/extractify-preflight` checks for it.
+
+**Paths with spaces.** If your project lives under `C:\Users\Your Name\Documents\...`, the Figma Extractify installer handles spaces correctly, but `npm` and `npx` can still trip on certain packages. If you hit ENOENT or "cannot find module" errors that reference the full path, move the project to a spaceless path like `C:\dev\my-project`. This is a broader Node.js ecosystem issue, not specific to Figma Extractify.
+
+**Figma Desktop at `127.0.0.1:3845`.** Same endpoint as macOS/Linux — no Windows-specific quirk. If Windows Firewall prompts you the first time Figma Desktop runs in Dev Mode, allow it on private networks. If the port is already in use, close other localhost tools and restart Figma Desktop.
+
+**Windows Defender / antivirus scanning `node_modules/`.** Can slow `npm install` and Playwright Chromium download to a crawl. If installs take 10+ minutes, add your project folder to the Defender exclusion list (Settings → Virus & threat protection → Exclusions).
+
+---
+
 ## Something else
 
 Before opening an issue, check:

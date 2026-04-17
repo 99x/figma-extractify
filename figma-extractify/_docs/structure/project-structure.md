@@ -22,11 +22,37 @@ Key implications:
 
 ```
 .
+  CLAUDE.md                       (per-project instructions for Claude Code / Cursor)
   next.config.mjs
   postcss.config.mjs
   tsconfig.json
   package.json
   package-lock.json
+
+  .mcp.json                       (Figma Desktop + Remote MCP server config — read at IDE startup)
+
+  .claude/
+    commands/                     (project-scoped /extractify-* slash commands)
+      extractify-preflight.md
+      extractify-setup.md
+      extractify-new-component.md
+      extractify-audit.md
+      extractify-discover.md
+      extractify-code-connect.md
+      extractify-security-audit.md
+      ralph-loop.md
+    skills/
+      figma-use/                  (mandatory prerequisite for any use_figma tool call)
+        SKILL.md
+        references/               (per-topic Plugin API references loaded on demand)
+    hooks/
+      ralph-stop.sh               (stop-hook that terminates the Ralph Loop on completion)
+    settings.json                 (shared project settings — committed)
+    settings.local.json.example   (template for per-machine MCP permissions — copy to settings.local.json, git-ignored)
+
+  .cursor/rules/figma-to-code.mdc (Cursor-only project rules, same content family as CLAUDE.md)
+  .windsurfrules                  (Windsurf-only project rules)
+  .github/copilot-instructions.md (GitHub Copilot project rules)
 
   _docs/
     start-here.md                 (entry point — reading order, golden rules, use_figma prerequisite, output checklist)
@@ -37,9 +63,11 @@ Key implications:
       accessibility.md            (minimum a11y requirements)
       consistency-rules.md        (aspect ratios, grid, pattern matching, typography extraction)
       doc-versioning.md           (how to handle convention changes)
+      figma-mcp-setup.md          (connecting to Figma via Desktop or Remote MCP — single source of truth)
       project-rules.md            (naming, file creation, styling conventions)
       project-structure.md        ← this file
       rich-text.md                (RichText vs RichTextWrapper usage)
+      troubleshooting.md          (index of common failures with jumps to the fix)
       visual-review.md            (visual review loop — Ralph pattern)
     front-end/
       01-colors.md                (color token extraction contract)

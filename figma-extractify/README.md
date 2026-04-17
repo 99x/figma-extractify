@@ -83,11 +83,17 @@ The installer detects `package.json` in the current directory and installs from 
 
 ### Windows
 
-Double-click `install.bat` or run from PowerShell:
+Two equivalent options — pick whichever is easier:
 
 ```powershell
+# Option 1 — double-click:
+figma-extractify\install.bat
+
+# Option 2 — run from PowerShell:
 powershell -ExecutionPolicy Bypass -File figma-extractify\install.ps1
 ```
+
+`install.bat` is a thin wrapper that just calls `install.ps1`.
 
 ### Uninstall
 
@@ -95,8 +101,9 @@ powershell -ExecutionPolicy Bypass -File figma-extractify\install.ps1
 # macOS / Linux
 bash uninstall.sh
 
-# Windows — double-click uninstall.bat, or:
-powershell -ExecutionPolicy Bypass -File uninstall.ps1
+# Windows — either:
+uninstall.bat                                            # double-click, OR
+powershell -ExecutionPolicy Bypass -File uninstall.ps1   # PowerShell
 ```
 
 **What the uninstaller removes:**
@@ -171,6 +178,25 @@ components:
 ```
 
 Each URL maps to a page or frame in your file. Leave a field as `~` to skip it or have Claude ask you when the time comes.
+
+### Parent/child components
+
+When a component is actually a composition of smaller reusable components, use the nested form. `/extractify-new-component` will build the children first, then assemble the parent — children can nest recursively, and any child already present in `src/components/` is imported instead of rebuilt.
+
+```yaml
+components:
+  # Simple component
+  hero: https://www.figma.com/design/ABC123/YourProject?node-id=11-12
+
+  # Parent with children
+  news-section:
+    figma: https://www.figma.com/design/ABC123/YourProject?node-id=20-1
+    children:
+      news-block:
+        figma: https://www.figma.com/design/ABC123/YourProject?node-id=20-2
+      news-pagination:
+        figma: https://www.figma.com/design/ABC123/YourProject?node-id=20-3
+```
 
 ---
 

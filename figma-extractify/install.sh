@@ -27,11 +27,28 @@ elif [ -f "boilerplate/package.json" ]; then
   APP_ROOT="$(cd boilerplate && pwd)"
 fi
 
+# ── Install vs upgrade detection ─────────────────────────────────────────────
+# If /extractify-setup already exists in the target, treat this run as an
+# upgrade: shipped files (commands, skill, hook, scripts, _docs contracts, IDE
+# rules) are overwritten; user-owned files (figma-paths.yaml, learnings.md,
+# CLAUDE.md, .mcp.json, .claude/settings.json) are preserved.
+MODE="install"
+if [ -n "$APP_ROOT" ] && [ -f "$APP_ROOT/.claude/commands/extractify-setup.md" ]; then
+  MODE="upgrade"
+fi
+UPGRADED_COUNT=0
+PRESERVED_COUNT=0
+
 # ── Header ────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}╔══════════════════════════════════════════════╗${NC}"
 echo -e "${BOLD}║        Figma Extractify — Installer          ║${NC}"
 echo -e "${BOLD}╚══════════════════════════════════════════════╝${NC}"
+if [ "$MODE" = "upgrade" ]; then
+  echo ""
+  echo -e "  ${YELLOW}Detected existing install — running in upgrade mode.${NC}"
+  echo -e "  Shipped files will be overwritten; user-owned files preserved."
+fi
 echo ""
 
 # ── 1. Check Node.js ──────────────────────────────────────────────────────────
@@ -74,11 +91,22 @@ else
 fi
 
 # ── 3. Optional QA tools ──────────────────────────────────────────────────────
-echo ""
-echo -e "  ${BOLD}Optional QA tools${NC} power the visual diff and accessibility audit:"
-echo -e "  ${YELLOW}pixelmatch${NC} · ${YELLOW}pngjs${NC} · ${YELLOW}@axe-core/playwright${NC} · ${YELLOW}Playwright Chromium${NC}"
-echo ""
-read -r -p "  Install QA tools? [y/N] " INSTALL_QA
+HAS_QA=false
+if [ -n "$APP_ROOT" ] && [ -f "$APP_ROOT/package.json" ] && \
+   grep -q '"@axe-core/playwright"' "$APP_ROOT/package.json" 2>/dev/null; then
+  HAS_QA=true
+fi
+
+if [ "$HAS_QA" = true ]; then
+  ok "QA tools already installed — skipping prompt"
+  INSTALL_QA="n"
+else
+  echo ""
+  echo -e "  ${BOLD}Optional QA tools${NC} power the visual diff and accessibility audit:"
+  echo -e "  ${YELLOW}pixelmatch${NC} · ${YELLOW}pngjs${NC} · ${YELLOW}@axe-core/playwright${NC} · ${YELLOW}Playwright Chromium${NC}"
+  echo ""
+  read -r -p "  Install QA tools? [y/N] " INSTALL_QA
+fi
 if [[ "$INSTALL_QA" =~ ^[Yy]$ ]]; then
   step "Installing QA tools..."
   # Install into the same location as the main dependencies
@@ -126,6 +154,7 @@ if [ -d "$COMMANDS_SRC" ]; then
     cp "$cmd_file" "$LOCAL_COMMANDS_DIR/"
     ok "Installed command: $cmd_name → .claude/commands/$cmd_name"
     COMMANDS_FOUND=true
+    UPGRADED_COUNT=$((UPGRADED_COUNT + 1))
   done
 fi
 
@@ -148,9 +177,13 @@ SKILLS_FOUND=false
 
 for SRC in "${SKILL_SOURCES[@]}"; do
   if [ -d "$SRC/figma-use" ]; then
+    # Clean-replace so removed-upstream files don't linger in the user's copy.
+    # figma-use/ is fully owned by figma-extractify — no user files to preserve.
+    rm -rf "$LOCAL_SKILLS_DIR/figma-use"
     cp -r "$SRC/figma-use" "$LOCAL_SKILLS_DIR/"
     ok "Installed skill: figma-use → .claude/skills/figma-use"
     SKILLS_FOUND=true
+    UPGRADED_COUNT=$((UPGRADED_COUNT + 1))
     break
   fi
 done
@@ -208,6 +241,7 @@ else
   cp "$HOOK_SRC" "$HOOK_DEST_DIR/ralph-stop.sh"
   chmod +x "$HOOK_DEST_DIR/ralph-stop.sh"
   ok "Installed Ralph stop hook: $HOOK_DEST_DIR/ralph-stop.sh"
+  UPGRADED_COUNT=$((UPGRADED_COUNT + 1))
 fi
 
 if command -v jq &>/dev/null; then
@@ -224,21 +258,36 @@ fi
 step "Installing documentation contracts..."
 DOCS_SRC="$PROJECT_DIR/_docs"
 
+# Files under _docs/ that are user-owned and must never be overwritten on
+# upgrade. Everything else in _docs/ is shipped by figma-extractify and gets
+# force-updated so contract changes propagate to existing installs.
+DOCS_PRESERVE=(
+  "figma-paths.yaml"
+  "learnings.md"
+)
+
 if [ -d "$DOCS_SRC" ] && [ -n "$APP_ROOT" ]; then
-  if [ -d "$APP_ROOT/_docs" ]; then
-    # Merge without overwriting — don't clobber user edits
-    # cp -n (no-clobber) works on macOS and GNU coreutils; fallback to plain cp
-    if cp -rn "$DOCS_SRC"/* "$APP_ROOT/_docs/" 2>/dev/null; then
-      ok "Merged _docs/ → $APP_ROOT/_docs/ (existing files preserved)"
+  DOCS_DEST="$APP_ROOT/_docs"
+  mkdir -p "$DOCS_DEST"
+  while IFS= read -r -d '' src_file; do
+    rel="${src_file#"$DOCS_SRC"/}"
+    dest_file="$DOCS_DEST/$rel"
+    mkdir -p "$(dirname "$dest_file")"
+    preserved=false
+    for p in "${DOCS_PRESERVE[@]}"; do
+      if [ "$rel" = "$p" ] && [ -f "$dest_file" ]; then
+        preserved=true
+        break
+      fi
+    done
+    if [ "$preserved" = true ]; then
+      PRESERVED_COUNT=$((PRESERVED_COUNT + 1))
     else
-      # Fallback: copy everything (may overwrite)
-      cp -r "$DOCS_SRC"/* "$APP_ROOT/_docs/"
-      ok "Merged _docs/ → $APP_ROOT/_docs/"
+      cp "$src_file" "$dest_file"
+      UPGRADED_COUNT=$((UPGRADED_COUNT + 1))
     fi
-  else
-    cp -r "$DOCS_SRC" "$APP_ROOT/_docs"
-    ok "Installed _docs/ → $APP_ROOT/_docs/"
-  fi
+  done < <(find "$DOCS_SRC" -type f -print0)
+  ok "Installed _docs/ → $DOCS_DEST (figma-paths.yaml and learnings.md preserved if present)"
 elif [ -d "$DOCS_SRC" ] && [ -z "$APP_ROOT" ]; then
   warn "_docs/ found but no app root detected — copy _docs/ to your project manually"
 else
@@ -252,29 +301,33 @@ fi
 step "Installing project config files..."
 
 if [ -n "$APP_ROOT" ]; then
-  # ── 6a. CLAUDE.md (project-level agent config) ─────────────────────────────
+  # ── 6a. CLAUDE.md (project-level agent config — user-customized) ──────────
+  # Preserve on upgrade; teams edit CLAUDE.md heavily for project specifics.
   if [ -f "$PROJECT_DIR/CLAUDE.md" ] && [ ! -f "$APP_ROOT/CLAUDE.md" ]; then
     cp "$PROJECT_DIR/CLAUDE.md" "$APP_ROOT/CLAUDE.md"
     ok "Installed CLAUDE.md"
   elif [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
-    ok "CLAUDE.md already exists — skipped"
+    ok "CLAUDE.md already exists — preserved"
+    PRESERVED_COUNT=$((PRESERVED_COUNT + 1))
   fi
 
-  # ── 6b. .mcp.json (Figma MCP server definitions) ──────────────────────────
+  # ── 6b. .mcp.json (Figma MCP server definitions — may contain others) ────
   if [ -f "$PROJECT_DIR/.mcp.json" ] && [ ! -f "$APP_ROOT/.mcp.json" ]; then
     cp "$PROJECT_DIR/.mcp.json" "$APP_ROOT/.mcp.json"
     ok "Installed .mcp.json (Figma MCP servers)"
   elif [ -f "$PROJECT_DIR/.mcp.json" ] && [ -f "$APP_ROOT/.mcp.json" ]; then
-    warn ".mcp.json already exists — review $PROJECT_DIR/.mcp.json and merge manually if needed"
+    warn ".mcp.json already exists — preserved (review $PROJECT_DIR/.mcp.json and merge manually if needed)"
+    PRESERVED_COUNT=$((PRESERVED_COUNT + 1))
   fi
 
-  # ── 6c. .claude/settings.json (permissions + hooks) ────────────────────────
+  # ── 6c. .claude/settings.json (permissions — may contain other tools) ────
   if [ -f "$PROJECT_DIR/.claude/settings.json" ] && [ ! -f "$APP_ROOT/.claude/settings.json" ]; then
     mkdir -p "$APP_ROOT/.claude"
     cp "$PROJECT_DIR/.claude/settings.json" "$APP_ROOT/.claude/settings.json"
     ok "Installed .claude/settings.json"
   elif [ -f "$PROJECT_DIR/.claude/settings.json" ]; then
-    ok ".claude/settings.json already exists — skipped"
+    ok ".claude/settings.json already exists — preserved"
+    PRESERVED_COUNT=$((PRESERVED_COUNT + 1))
   fi
 
   # Note: settings.local.json is intentionally NOT copied. It's a per-machine
@@ -284,44 +337,45 @@ if [ -n "$APP_ROOT" ]; then
   # MCP permissions lives at figma-extractify/.claude/settings.local.json.example
   # if you want to seed one manually.
 
-  # ── 6d. scripts/ (visual-diff + a11y-audit) ────────────────────────────────
+  # ── 6d. scripts/ (visual-diff + a11y-audit — shipped, overwritten) ───────
   if [ -d "$PROJECT_DIR/scripts" ]; then
     mkdir -p "$APP_ROOT/scripts"
     for script_file in "$PROJECT_DIR/scripts"/*; do
       [ -f "$script_file" ] || continue
       script_name=$(basename "$script_file")
-      if [ ! -f "$APP_ROOT/scripts/$script_name" ]; then
-        cp "$script_file" "$APP_ROOT/scripts/$script_name"
-        ok "Installed scripts/$script_name"
-      else
-        ok "scripts/$script_name already exists — skipped"
-      fi
+      cp "$script_file" "$APP_ROOT/scripts/$script_name"
+      ok "Installed scripts/$script_name"
+      UPGRADED_COUNT=$((UPGRADED_COUNT + 1))
     done
   fi
 
-  # ── 6e. IDE rules (Cursor + Windsurf) ──────────────────────────────────────
+  # ── 6e. IDE rules (Cursor + Windsurf + Copilot — shipped, overwritten) ──
   if [ -d "$PROJECT_DIR/.cursor/rules" ]; then
     mkdir -p "$APP_ROOT/.cursor/rules"
     for rule_file in "$PROJECT_DIR/.cursor/rules"/*; do
       [ -f "$rule_file" ] || continue
       rule_name=$(basename "$rule_file")
-      if [ ! -f "$APP_ROOT/.cursor/rules/$rule_name" ]; then
-        cp "$rule_file" "$APP_ROOT/.cursor/rules/$rule_name"
-        ok "Installed .cursor/rules/$rule_name"
-      else
-        ok ".cursor/rules/$rule_name already exists — skipped"
-      fi
+      cp "$rule_file" "$APP_ROOT/.cursor/rules/$rule_name"
+      ok "Installed .cursor/rules/$rule_name"
+      UPGRADED_COUNT=$((UPGRADED_COUNT + 1))
     done
   fi
 
-  if [ -f "$PROJECT_DIR/.windsurfrules" ] && [ ! -f "$APP_ROOT/.windsurfrules" ]; then
+  if [ -f "$PROJECT_DIR/.windsurfrules" ]; then
     cp "$PROJECT_DIR/.windsurfrules" "$APP_ROOT/.windsurfrules"
     ok "Installed .windsurfrules"
-  elif [ -f "$PROJECT_DIR/.windsurfrules" ]; then
-    ok ".windsurfrules already exists — skipped"
+    UPGRADED_COUNT=$((UPGRADED_COUNT + 1))
+  fi
+
+  # ── 6f. GitHub Copilot instructions (shipped, overwritten) ───────────────
+  if [ -f "$PROJECT_DIR/.github/copilot-instructions.md" ]; then
+    mkdir -p "$APP_ROOT/.github"
+    cp "$PROJECT_DIR/.github/copilot-instructions.md" "$APP_ROOT/.github/copilot-instructions.md"
+    ok "Installed .github/copilot-instructions.md"
+    UPGRADED_COUNT=$((UPGRADED_COUNT + 1))
   fi
 else
-  warn "No app root detected — copy config files manually (CLAUDE.md, .mcp.json, scripts/, .cursor/rules/)"
+  warn "No app root detected — copy config files manually (CLAUDE.md, .mcp.json, scripts/, .cursor/rules/, .github/copilot-instructions.md)"
 fi
 
 # ── 7. Check Figma paths file ─────────────────────────────────────────────────
@@ -366,8 +420,16 @@ fi
 
 # ── 9. Done ───────────────────────────────────────────────────────────────────
 echo ""
+if [ "$MODE" = "upgrade" ]; then
+  ok "Upgrade summary: $UPGRADED_COUNT shipped files updated, $PRESERVED_COUNT user-owned files preserved"
+  echo ""
+fi
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}${BOLD}  Setup complete. Here's what to do next:${NC}"
+if [ "$MODE" = "upgrade" ]; then
+  echo -e "${GREEN}${BOLD}  Upgrade complete. Here's what to do next:${NC}"
+else
+  echo -e "${GREEN}${BOLD}  Setup complete. Here's what to do next:${NC}"
+fi
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo -e "  ${BOLD}1.${NC} Add your Figma URLs → ${YELLOW}_docs/figma-paths.yaml${NC}"

@@ -56,9 +56,9 @@ When extracting tokens from Figma:
 
 ### MCP and tooling edge cases
 
-**Figma MCP setup, auth, and troubleshooting → [`figma-mcp-setup.md`](figma-mcp-setup.md).**
+**Figma MCP setup, auth, candidate IDs, and troubleshooting → [`figma-mcp-setup.md`](figma-mcp-setup.md).**
 
-In short: `/extractify-*` commands try Desktop first (`user-figma`, `user-Figma Desktop`, `figma-desktop`), fall back to Remote (`plugin-figma-figma`, `figma`), fail only if both are unreachable. The full server comparison, OAuth walkthrough, and failure-mode troubleshooting live in the setup doc — do not duplicate that material here.
+In short: `/extractify-*` commands try Desktop first, fall back to Remote, fail only if both are unreachable. The canonical server-ID candidate list, OAuth walkthrough, and failure-mode troubleshooting live in the setup doc — do not duplicate that material here.
 
 **`generate_figma_design` is remote MCP only.** It captures a live localhost page via browser script injection (does not accept raw HTML). Requirements: Remote authenticated, `npm run dev` running, page served on localhost.
 

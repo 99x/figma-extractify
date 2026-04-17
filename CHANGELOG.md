@@ -17,8 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - Initial release of the Figma Extractify monorepo
-- AI skill system for extracting design tokens from Figma
+- AI slash-command system (`/extractify-*`) for extracting design tokens from Figma
 - Next.js 16 + Tailwind CSS v4 boilerplate with GSAP, Swiper, react-hook-form, and Fancybox
 - Example Figma file for testing the extraction workflow
 - CI pipeline with security audit, type checking, linting, and build
-- Support for Claude Code, Cowork, Cursor, Windsurf, and GitHub Copilot
+- Support for Claude Code, Cursor, Windsurf, and GitHub Copilot

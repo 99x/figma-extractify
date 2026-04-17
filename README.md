@@ -76,6 +76,8 @@ cp -r ../figma-extractify .
 
 # 4. Run the installer
 bash figma-extractify/install.sh
+# Windows: double-click figma-extractify\install.bat
+#   or:    powershell -ExecutionPolicy Bypass -File figma-extractify\install.ps1
 
 # The installer will:
 #   - Install npm dependencies
