@@ -140,7 +140,7 @@ if (-not $COMMANDS_FOUND) {
 
 # ── 4b. Skills (.claude/skills/) ──────────────────────────────────────────────
 # Only figma-use is installed as a skill — it's the mandatory prerequisite for
-# every use_figma tool call (see _docs\SKILL.md). The /extractify-* workflows
+# every use_figma tool call (see _docs\start-here.md). The /extractify-* workflows
 # are pure slash commands; they don't need skill wrappers. The evals\ directory
 # is intentionally skipped — it holds internal eval data, not a skill.
 $SKILL_SOURCES = @(

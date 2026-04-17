@@ -4,10 +4,8 @@ globs: **/*.tsx,**/*.ts,**/*.pcss,**/*.css
 alwaysApply: true
 ---
 
-Before starting any task in this project, read @_docs/SKILL.md for the step-by-step workflow.
-
-Then read in order:
-- @_docs/start-here.md — golden rules and entry point
+Before starting any task in this project, read in order:
+- @_docs/start-here.md — entry point: reading order, golden rules, `use_figma` prerequisite, output checklist
 - @_docs/structure/project-rules.md — naming and file conventions
 - @_docs/learnings.md — common mistakes (read the top 10 before writing any code)
 

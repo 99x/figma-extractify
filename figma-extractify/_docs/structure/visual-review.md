@@ -26,7 +26,7 @@ This project uses the **Ralph Loop pattern** — an iterative self-correction cy
 
 #### Step 1 — Build
 
-Generate or update the component following all project rules (`CLAUDE.md`, `_docs/SKILL.md`, component contract).
+Generate or update the component following all project rules (`CLAUDE.md`, `_docs/start-here.md`, component contract).
 
 #### Step 2 — Serve
 

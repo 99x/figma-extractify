@@ -4,8 +4,7 @@ This is a **Next.js 16 + Tailwind CSS v4** boilerplate for building isolated, pr
 
 ## Always read before writing code
 
-- `_docs/SKILL.md` — step-by-step workflow
-- `_docs/start-here.md` — golden rules
+- `_docs/start-here.md` — reading order, golden rules, `use_figma` prerequisite, output checklist
 - `_docs/learnings.md` — top 10 common mistakes + known patterns
 
 ## Non-negotiable rules

@@ -53,6 +53,13 @@ figma-extractify/          ← repo root (clone lands here)
 └── example-file/          ← sample .fig file to test extraction
 ```
 
+## Requirements
+
+- **Node.js** 18.17 or higher (Next.js 16 minimum — run `node --version` to check; update via [nvm](https://github.com/nvm-sh/nvm) or [nodejs.org](https://nodejs.org))
+- An MCP-capable AI IDE: **Claude Code**, **Cursor**, **Windsurf**, or **GitHub Copilot**
+- A **Figma MCP** connection — either Figma Desktop in Dev Mode (paid plan) or Figma Remote MCP via OAuth. Details: [figma-mcp-setup.md](figma-extractify/_docs/structure/figma-mcp-setup.md)
+- **Optional (for visual review):** Playwright + Chromium. `install.sh` will install these for you.
+
 ## Using them together
 
 The recommended setup — clone the repo, run the installer, and start extracting:

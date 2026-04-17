@@ -99,6 +99,24 @@ bash uninstall.sh
 powershell -ExecutionPolicy Bypass -File uninstall.ps1
 ```
 
+**What the uninstaller removes:**
+
+- `.claude/commands/extractify-*.md` and `ralph-loop.md` (project-scoped slash commands)
+- `.claude/skills/figma-use/` (the `use_figma` prerequisite skill)
+- Any leftover `extractify-*/` skills from older installer versions (project-local + global `~/.claude/`)
+- Optional QA dev-deps from `package.json`: `pixelmatch`, `pngjs`, `@axe-core/playwright`, `@playwright/test`
+- Runtime state: `.screenshots/`, `.audit/`, `.ralph-loop-state.json`
+
+**What it does NOT touch** (delete manually if you want a full removal):
+
+- Your source code — `src/`, `public/`, `package.json` (aside from QA dev-deps)
+- `_docs/` — contracts, `figma-paths.yaml`, and `learnings.md` remain (they may be referenced by your team)
+- `.mcp.json` — stays so other MCP servers you've added keep working
+- `CLAUDE.md`, `.cursor/rules/`, `.windsurfrules` — project config you may still want
+- `scripts/visual-diff.js` and `scripts/a11y-audit.js` — re-referenced by package.json scripts if you kept them
+
+This is intentional: re-running `install.sh` later produces an idempotent install without overwriting your docs or config. To fully erase Figma Extractify, run the uninstaller and then delete the files above.
+
 ---
 
 ## Commands
@@ -188,27 +206,14 @@ Each URL maps to a page or frame in your file. Leave a field as `~` to skip it o
 
 ### About the two Figma MCP servers
 
-Figma Extractify works against either server. Both expose the same read tools (`get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`, Code Connect). Every command resolves the server at run time — Desktop first, Remote as fallback — and fails preflight only if **both** are down.
+Figma Extractify works against either server. Both expose the same read surface; skills resolve **Desktop first, Remote as automatic fallback** and fail only if both are down.
 
-**Figma Desktop MCP** (preferred)
-- Runs locally at `http://127.0.0.1:3845/mcp` whenever Figma Desktop is open with Dev Mode on.
-- Dev Mode requires a **paid Figma plan** (Professional, Organization, Enterprise) or a free Education plan.
-- To enable: open any file in Figma Desktop and press **Shift+D** (or click the `</>` toggle in the bottom toolbar).
-- More info: [Figma Dev Mode plans](https://help.figma.com/hc/en-us/articles/15023124644247)
+- **Desktop** (preferred): `http://127.0.0.1:3845/mcp` — requires Figma Desktop open with Dev Mode on (paid plan).
+- **Remote** (fallback): `https://mcp.figma.com/mcp` — OAuth, no desktop app needed; also required for `/extractify-discover` write-back.
 
-**Figma Remote MCP** (fallback)
-- Served at `https://mcp.figma.com/mcp`, authenticated via **OAuth 2.0** — no Personal Access Token, no API key.
-- Works without the desktop app, which makes it the right option for headless setups or when Dev Mode is unavailable.
-- Also required for write-back flows like `/extractify-discover` — `generate_figma_design` is Remote-only.
-- Do **not** add an `X-Figma-Token` header to `.mcp.json`; it breaks the OAuth flow.
+Both are already wired up in `.mcp.json` after install. Run `/extractify-preflight` to verify the setup.
 
-**How to complete the Remote OAuth flow** (one-time per IDE install):
-
-- **Claude Code** — in the chat, run `/mcp` → select `figma` → **Authenticate**. A browser opens, log into Figma and approve. Fully restart Claude Code so the token is picked up by live sessions.
-- **Cursor** — open **MCP Settings** (`Cmd/Ctrl+Shift+P` → "Cursor: Open MCP Settings") → find the `figma` entry → click **Authenticate**. Restart Cursor.
-- Alternative: trigger any Figma tool call — the IDE prompts OAuth automatically on first use.
-
-Both servers are already wired up in `.mcp.json` after install. Run `/extractify-preflight` to verify which one is active before your first `/extractify-setup` — it classifies Remote failures (not registered / 401 / network) and walks you through the matching fix.
+**Full setup, OAuth walkthrough, and troubleshooting:** see [`_docs/structure/figma-mcp-setup.md`](_docs/structure/figma-mcp-setup.md).
 
 ---
 

@@ -10,32 +10,11 @@ This is NOT a full Next.js application. You build isolated components, preview t
 
 ## Required reading (before writing any code)
 
-**Always read `_docs/SKILL.md` first** — it contains the step-by-step workflow.
+**Always read [`_docs/start-here.md`](_docs/start-here.md) first.** It is the single source of truth for the reading order — follow the links it lists, in order, before writing any code.
 
-Then read the docs in this order:
+Also always read `_docs/learnings.md` — its **Common mistakes** section (pinned at the top) captures the 10 most frequent issues to avoid, followed by a chronological log of patterns and fixes.
 
-1. `_docs/start-here.md` — entry point and golden rules
-2. `_docs/structure/project-structure.md` — where things live
-3. `_docs/structure/project-rules.md` — naming and file creation conventions
-4. `_docs/structure/accessibility.md` — minimum a11y requirements
-5. `_docs/structure/ai-workflow.md` — Figma-to-repo mapping and self-update rules
-6. `_docs/structure/consistency-rules.md` — aspect ratios, grid, pattern matching, typography extraction
-7. `_docs/structure/doc-versioning.md` — how to handle convention changes
-8. `_docs/structure/rich-text.md` — RichText component usage
-9. `_docs/structure/agent-architecture.md` — subagent model assignments and context rot prevention
-10. `_docs/structure/visual-diff.md` — pixelmatch-based quantified visual comparison
-11. `_docs/structure/a11y-audit.md` — automated axe-core accessibility auditing
-12. `_docs/structure/code-connect.md` — Figma Code Connect integration
-
-Always read `_docs/learnings.md` before any coding task — it contains a **Common mistakes** section at the top (the 10 most frequent issues) plus a chronological log of patterns and fixes.
-
-For Figma extraction tasks, also read the relevant contract:
-
-- Colors: `_docs/front-end/01-colors.md`
-- Typography: `_docs/front-end/02-typography.md`
-- Grid / container: `_docs/front-end/03-grid-container.md`
-- Components: `_docs/front-end/04-component-contract.md`
-- Icons / SVG: `_docs/front-end/05-icons-svg.md`
+For Figma extraction tasks, `start-here.md` also points at the per-token contracts in `_docs/front-end/` (colors, typography, grid, components, icons, buttons, form elements). It also covers the `use_figma` prerequisite, the visual review loop, and the output checklist.
 
 ---
 

@@ -229,14 +229,18 @@ Resolve `FIGMA_PATHS_FILE` once before Phase 1 and reuse it:
 
 1. **Try Desktop.** For each of `user-figma`, `user-Figma Desktop`, `figma-desktop`, call `get_metadata` on the first id that exists.
    - Tool responds → ✅ Desktop available. Record `FIGMA_MCP=desktop:<id>` and proceed.
-2. **If Desktop failed, try Remote.** For each of `plugin-figma-figma`, `figma`, call `get_metadata`.
-   - Tool responds → ✅ Remote available. Record `FIGMA_MCP=remote:<id>` and proceed. Warn the user:
+2. **If Desktop failed, try Remote.** For each of `plugin-figma-figma`, `figma`, call `get_metadata`. Classify the response:
+   - Responds with data → ✅ Remote available AND authenticated. Record `FIGMA_MCP=remote:<id>` and proceed with this warning:
 
      ```
      ⚠️  Figma Desktop MCP unavailable — using Remote MCP as fallback.
          Setup will continue; all read tools work over Remote with URLs.
      ```
-3. **If both failed**, stop entirely and output:
+   - Returns **401 / "unauthorized" / "authentication required"** → Remote is registered but **OAuth not completed**. Stop with Block B below.
+   - **Tool not found** in the toolkit → Remote is not registered. Stop with Block A below.
+3. **If both failed**, stop entirely. Pick the block that matches the Remote failure mode:
+
+**Block A — Remote not registered OR Desktop-only setup:**
 
 ```
 ❌ Pre-flight failed — no Figma MCP server is reachable.
@@ -248,16 +252,41 @@ Setup needs at least one of:
     → Dev Mode requires a paid Figma plan. More info:
       https://help.figma.com/hc/en-us/articles/15023124644247
 
-  • Figma Remote MCP (https://mcp.figma.com/mcp)
-    → Uses OAuth — the IDE opens a browser prompt on first use.
-    → Verify .mcp.json has a "figma" entry pointing at https://mcp.figma.com/mcp.
+  • Figma Remote MCP (https://mcp.figma.com/mcp) — uses OAuth
+    → Verify .mcp.json at the project root contains:
+
+        "figma": {
+          "type": "http",
+          "url": "https://mcp.figma.com/mcp"
+        }
+
+    → Do NOT add an X-Figma-Token header — it breaks OAuth.
+    → Fully restart Claude Code / Cursor after editing .mcp.json.
 
 Steps to fix:
   1. Enable at least one of the servers above
-  2. Restart Claude Code / Cursor — MCP connections are established at startup
+  2. Restart the IDE — MCP connections are established at startup
   3. Run /extractify-setup again
 
 For a full guided check, run /extractify-preflight.
+```
+
+**Block B — Remote registered but not authenticated (401):**
+
+```
+❌ Pre-flight failed — Figma Remote MCP needs OAuth.
+
+Quick fix:
+  Claude Code → /mcp → `figma` → Authenticate → restart IDE.
+  Cursor      → MCP Settings → `figma` → Authenticate → restart Cursor.
+
+Or enable Figma Desktop MCP (open Dev Mode) to skip OAuth entirely.
+
+Full walkthrough and troubleshooting:
+  → _docs/structure/figma-mcp-setup.md
+  → or run /extractify-preflight for the guided check
+
+Then run /extractify-setup again.
 ```
 
 All subsequent `get_metadata` / `get_design_context` / `get_screenshot` / `get_variable_defs` calls in this workflow should be made against the resolved `FIGMA_MCP` server.

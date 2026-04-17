@@ -29,8 +29,7 @@ Key implications:
   package-lock.json
 
   _docs/
-    start-here.md              (entry point — read this first)
-    SKILL.md                      (step-by-step workflow for AI agents)
+    start-here.md                 (entry point — reading order, golden rules, use_figma prerequisite, output checklist)
     figma-paths.yaml              (Figma URLs for each /extractify-setup step — edit before running the wizard)
     learnings.md                  (self-updating patterns log)
     structure/
